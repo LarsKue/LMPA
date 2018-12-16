@@ -34,7 +34,6 @@ public:
     LMPA(const LMPA& m);
 
     /* TODO:
-     *  Floating Point Support
      *  Multiplication
      *  Division
      *
@@ -59,6 +58,7 @@ public:
     LMPA& operator/=(const LMPA& m);
     LMPA& operator%=(const LMPA& m);
 
+    /// Logical ///
     bool operator==(const LMPA& m);
     bool operator!=(const LMPA& m);
     bool operator<(const LMPA& m);
