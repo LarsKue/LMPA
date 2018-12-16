@@ -43,7 +43,7 @@ LMPA::LMPA(std::string n, std::size_t prec) noexcept(false) {
     pre_length = pre_digits.length();
 }
 
-LMPA::LMPA(const LMPA& m) {
+LMPA::LMPA(const LMPA&) {
     std::cout << "debug" << std::endl;
 }
 
