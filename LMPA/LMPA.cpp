@@ -6,80 +6,289 @@
 #include <algorithm> // reverse
 
 #include <utility>
+#include <limits> // size_t max
+
+
+// TODO: USE ITERATORS INSTEAD OF
 
 /// Binary Implementation ///
 
-Binary::Binary() noexcept {
-    sign = positive;
-    digits.emplace_back(0);
+namespace {
+    // Binary sign definitions
+    constexpr bool negative = true;
+    constexpr bool positive = false;
+}
+
+
+/// Constructors ///
+
+Binary::Binary() noexcept : digits(32, 0) {
+    // generates a standard 32 bit precision number of value 0
+}
+
+Binary::Binary(std::size_t precision) noexcept : digits(precision, 0) {
+    // generates a Binary with specific precision of value 0
 }
 
 Binary::Binary(const std::vector<bool>& d) noexcept {
-    sign = positive;
+    // assumes d already contains the sign
     digits = d;
     _precision = digits.size();
 }
 
 Binary::Binary(const std::vector<bool>& d, int sgn) noexcept(false) {
-    if (sgn == 1) { sign = positive; }
-    else if (sgn == -1) { sign = negative; }
+    digits.reserve(d.size() + 1);
+    digits = d;
+    if (sgn == 1) { digits.insert(digits.begin(), positive); }
+    else if (sgn == -1) { digits.insert(digits.begin(), negative); }
     else {
         throw std::runtime_error("Invalid sign given to Binary Constructor: "
-        + std::to_string(sgn) + ". Expected either 1 or -1.");
+                                 + std::to_string(sgn) + ". Expected either 1 or -1.");
     }
-    digits = d;
     _precision = digits.size();
 }
 
 Binary::Binary(const std::vector<bool>& d, bool sgn) noexcept {
-    sign = sgn;
     digits = d;
+    digits.insert(digits.begin(), sgn);
     _precision = digits.size();
 }
 
+
+/// Utility ///
+
+void Binary::set_precision(std::size_t prec) {
+    if (prec == precision()) { return; }
+    if (prec > precision()) {
+        // increasing precision won't alter value
+        digits.insert(digits.begin(), prec - precision(), this->sign());
+    } else {
+        // will shrink the binary without checking for ones, thus possibly altering the value
+        digits.erase(digits.begin(), digits.begin() + (precision() - prec));
+    }
+
+    _precision = prec;
+}
+
+/**
+ * \brief will lower the Binary's precision as much as possible without altering its value
+ * Calling this function on a Binary with 0 precision yields undefined behavior
+ */
+void Binary::shrink_to_fit() {
+    // remove all but one of the leading values that are the same as the sign
+    auto iter = digits.begin();
+    while (iter != digits.end() && *(++iter) == sign());
+    if (iter != digits.begin() + 1) {
+        digits.erase(digits.begin() + 1, iter);
+        _precision = digits.size();
+    }
+}
+
+/**
+ * \brief ensures the precision is at least n without altering the value
+ */
+void Binary::reserve(std::size_t n) {
+    if (precision() < n) {
+        digits.insert(digits.begin(), n - precision(), this->sign());
+        _precision = n;
+    }
+}
+
+
+/// Assignment ///
+
+Binary& Binary::operator=(const Binary& b) {
+    if (this == &b) {
+        return *this;
+    }
+
+    // must not demote precision
+    if (this->precision() <= b.precision()) {
+        this->digits = b.digits;
+    } else {
+        for (std::size_t i = 0; i < b.precision(); ++i) {
+            // copy from right to left
+            this->digits[this->precision() - i - 1] = b.digits[b.precision() - i - 1];
+        }
+        for (std::size_t i = b.precision(); i < this->precision(); ++i) {
+            // buffer with b's sign
+            this->digits[this->precision() - i - 1] = b.sign();
+        }
+    }
+
+    this->_precision = std::max(b.precision(), this->precision());
+    return *this;
+}
+
+Binary& Binary::operator=(Binary&& b) noexcept {
+    if (this == &b) {
+        return *this;
+    }
+
+    // must not demote precision
+    if (this->precision() <= b.precision()) {
+        this->digits = std::move(b.digits);
+    } else {
+        for (std::size_t i = 0; i < b.precision(); ++i) {
+            // copy from right to left
+            this->digits[this->precision() - i - 1] = b.digits[b.precision() - i - 1];
+        }
+        for (std::size_t i = b.precision(); i < this->precision(); ++i) {
+            // buffer with b's sign
+            this->digits[this->precision() - i - 1] = b.sign();
+        }
+        b.digits.clear();
+    }
+    this->_precision = std::max(b.precision(), this->precision());
+
+    b._precision = 0;
+
+    return *this;
+}
+
+Binary& Binary::operator+=(const Binary& b) {
+    // promote this to the higher precision of the two
+    this->set_precision(std::max(this->precision(), b.precision()));
+
+    // iterate from right to left, idx values always point one to the right of the current element
+    std::size_t leftidx = this->precision();
+    std::size_t rightidx = b.precision();
+
+    bool add = false;
+
+    while (leftidx > 1 && rightidx > 1) {
+        bool sum = (this->digits[leftidx - 1] ^ b.digits[rightidx - 1]) ^ add;
+        add = (this->digits[leftidx - 1] + b.digits[rightidx - 1] + add) > 1;
+        this->digits[leftidx - 1] = sum;
+        --leftidx;
+        --rightidx;
+    }
+
+    // get the sign of the shorter number and "pad" the number with it
+    // also need to decrement the corresponding index by one to prevent double calculation in below while statements
+    bool buffer = (this->precision() > b.precision()) ? (b.digits[--rightidx]) : (this->digits[--leftidx]);
+
+    while(leftidx > 0) {
+        bool sum = this->digits[leftidx - 1] ^ add ^ buffer;
+        add = (this->digits[leftidx - 1] + add + buffer) > 1;
+        this->digits[leftidx - 1] = sum;
+        --leftidx;
+    }
+    while (rightidx > 0) {
+        bool sum = b.digits[rightidx - 1] ^ add ^ buffer;
+        add = (b.digits[rightidx - 1] + add + buffer) > 1;
+        this->digits[rightidx - 1] = sum;
+        --rightidx;
+    }
+
+    return *this;
+}
+
+/// will promote acordingly
+Binary& Binary::operator<<=(const std::size_t n) {
+    for (std::size_t i = 0; i < n; ++i) {
+        digits.emplace_back(0);
+    }
+    this->_precision = digits.size();
+    return *this;
+}
+
+/// will demote accordingly
+Binary& Binary::operator>>=(const std::size_t n) {
+    if (n >= this->precision()) {
+        digits.clear();
+        this->_precision = 0;
+        return *this;
+    }
+
+    for (std::size_t i = 0; i < n; ++i) {
+        digits.pop_back();
+    }
+    this->_precision = digits.size();
+    return *this;
+}
+
+
+/// Increment, Decrement ///
+
+Binary Binary::operator++() {
+    // prefix
+    // add one to the vector
+    for (std::size_t idx = digits.size(); idx > 0; --idx) {
+        if (!digits[idx - 1]) {
+            digits[idx - 1] = true;
+            break;
+        }
+        digits[idx - 1] = false;
+    }
+    return *this;
+}
+
+Binary Binary::operator--() {
+    // prefix
+    // subtract one from the vector
+    for (std::size_t idx = digits.size(); idx > 0; --idx) {
+        if (digits[idx - 1]) {
+            digits[idx - 1] = false;
+            break;
+        }
+        digits[idx - 1] = true;
+    }
+    return *this;
+}
+
+const Binary Binary::operator++(int) {
+    // postfix
+    Binary result = *this;
+    ++(*this);
+    return result;
+}
+
+const Binary Binary::operator--(int) {
+    // postfix
+    Binary result = *this;
+    ++(*this);
+    return result;
+}
+
+
+/// Arithmetic ///
+
 // does basically nothing
 Binary Binary::operator+() const {
-    return Binary(this->digits, this->sign);
+    return *this;
 }
 
 // inverts the sign
 Binary Binary::operator-() const {
-    bool sgn = !sign;
     std::vector<bool> result = digits;
     // flip all bits
     result.flip();
-
-    bool add = true;
 
     // add one to the vector
     for (std::size_t idx = result.size(); idx > 0; --idx) {
         if (!result[idx - 1]) {
             result[idx - 1] = true;
-            add = false;
             break;
         }
         result[idx - 1] = false;
     }
 
-    if (add) {
-        sgn = !sgn;
-    }
-
-    return Binary(result, sgn);
+    return Binary(result);
 
 }
 
 Binary Binary::operator+(const Binary& b) const {
-    std::size_t leftidx = this->_precision;
-    std::size_t rightidx = b._precision;
+    // iterate from right to left, idx values always point one to the right of the current element
+    std::size_t leftidx = this->precision();
+    std::size_t rightidx = b.precision();
 
-    // result is automatically promoted to the higher precision
     std::vector<bool> result;
-    result.reserve(std::max(this->_precision, b._precision));
+    result.reserve(std::max(this->precision(), b.precision()));
 
     bool add = false;
 
-    while (leftidx > 0 && rightidx > 0) {
+    while (leftidx > 1 && rightidx > 1) {
         bool sum = (this->digits[leftidx - 1] ^ b.digits[rightidx - 1]) ^ add;
         add = (this->digits[leftidx - 1] + b.digits[rightidx - 1] + add) > 1;
         result.emplace_back(sum);
@@ -87,66 +296,117 @@ Binary Binary::operator+(const Binary& b) const {
         --rightidx;
     }
 
-    // buffer with "zeroes"
+    // get the sign of the shorter number and "pad" the number with it
+    // also need to decrement the corresponding index by one to prevent double calculation in below while statements
+    // FIXME: Possible bug with equivalent precisions? Why should only one index be reduced, why should it be reduced at all? need to investigate
+    bool buffer = (this->precision() > b.precision()) ? (b.digits[--rightidx]) : (this->digits[--leftidx]);
+
     while(leftidx > 0) {
-        bool sum = this->digits[leftidx - 1] ^ add;
-        add = (this->digits[leftidx - 1] + add) > 1;
+        bool sum = this->digits[leftidx - 1] ^ add ^ buffer;
+        add = (this->digits[leftidx - 1] + add + buffer) > 1;
         result.emplace_back(sum);
         --leftidx;
     }
     while (rightidx > 0) {
-        bool sum = b.digits[rightidx - 1] ^ add;
-        add = (b.digits[rightidx - 1] + add) > 1;
+        bool sum = b.digits[rightidx - 1] ^ add ^ buffer;
+        add = (b.digits[rightidx - 1] + add + buffer) > 1;
         result.emplace_back(sum);
         --rightidx;
     }
 
-    bool resultsign = this->sign ^ b.sign ^ add;
-
+    // Consider removing this shrink call as it may be superfluous?
     result.shrink_to_fit();
     std::reverse(result.begin(), result.end());
-    return Binary(result, resultsign);
+    return Binary(result);
 }
 
 Binary Binary::operator-(const Binary& b) const {
     return *this + (-b);
 }
 
+Binary Binary::operator*(const Binary& b) const {
+    std::size_t rightidx = b.precision();
+
+    std::vector<std::vector<bool>> sums;
+
+    // collect all vectors to add
+    while (rightidx > 0) {
+        if (b.digits[rightidx - 1]) {
+            std::vector<bool> temp = digits;
+            // add zeroes to end of vector corresponding with current index
+            temp.resize(temp.size() + b.precision() - rightidx, false);
+            // add vector to sums
+            sums.emplace_back(temp);
+        }
+        --rightidx;
+    }
+
+    // add all vectors (need to have resulting vector of appropriate size from the beginning)
+    std::vector<bool> result(std::max(this->precision(), b.precision()), 0);
+
+    for (const auto& vec : sums) {
+        std::size_t leftidx = result.size();
+        rightidx = vec.size();
+
+        bool add = false;
+        while (leftidx > 1 && rightidx > 1) {
+            bool sum = add ^ result[leftidx - 1] ^ vec[rightidx - 1];
+            add = (add + result[leftidx - 1] + vec[rightidx - 1]) > 1;
+            result[leftidx - 1] = sum;
+            --rightidx;
+            --leftidx;
+        }
+
+        // get the sign of the shorter number and "pad" the number with it
+        bool buffer = (this->precision() > vec.size()) ? (vec[0]) : (this->sign());
+
+        while(leftidx > 0) {
+            bool sum = this->digits[leftidx - 1] ^ add ^ buffer;
+            add = (this->digits[leftidx - 1] + add + buffer) > 1;
+            result[leftidx - 1] = sum;
+            --leftidx;
+        }
+
+    }
+
+    return Binary(result);
+}
+
 std::ostream& operator<<(std::ostream& stream, const Binary& b) {
     // show as regular binary number with sign (instead of two's complement)
-    if (b.sign) {
+    if (b.sign()) {
         stream << "-" << -b;
         return stream;
     }
 
     stream << "0b";
-    for (const bool mB : b.digits) {
-        stream << mB;
+    for (std::size_t i = 0; i < b.digits.size() - 1; ++i) {
+        stream << b.digits[i + 1];
     }
     return stream;
 }
 
 bool Binary::operator==(const Binary& b) const {
-    if (this->sign != b.sign) {
+    if (this->sign() != b.sign()) {
         return false;
     }
-    std::size_t leftidx = this->_precision;
-    std::size_t rightidx = b._precision;
-    while (leftidx > 0 && rightidx > 0) {
+    std::size_t leftidx = this->precision();
+    std::size_t rightidx = b.precision();
+    while (leftidx > 1 && rightidx > 1) {
         if (this->digits[leftidx - 1] != b.digits[rightidx - 1]) {
             return false;
         }
         --leftidx;
         --rightidx;
     }
-    while (leftidx > 0) {
+    while (leftidx > 1) {
         if (this->digits[leftidx - 1] != 0) {
             return false;
         }
         --leftidx;
     }
 
-    while (rightidx > 0) {
+    while (rightidx > 1) {
         if (b.digits[rightidx - 1] != 0) {
             return false;
         }
@@ -161,9 +421,10 @@ bool Binary::operator!=(const Binary& b) const {
 }
 
 bool Binary::operator<(const Binary& b) const {
-    if (!this->sign && b.sign) {
+    // compare signs first
+    if (!this->sign() && b.sign()) {
         return false;
-    } else if (this->sign && !b.sign) {
+    } else if (this->sign() && !b.sign()) {
         return true;
     }
 
@@ -171,25 +432,25 @@ bool Binary::operator<(const Binary& b) const {
     std::size_t rightidx = 0;
 
     // these while loops account for leading zeroes
-    while (this->_precision - leftidx > b._precision) {
+    while (this->precision() - leftidx > b.precision()) {
         // this->digits is longer than b.digits
         if (this->digits[leftidx] != 0) {
-            return this->sign;
+            return this->sign();
         }
         ++leftidx;
     }
 
-    while (b._precision - rightidx > this->_precision) {
+    while (b.precision() - rightidx > this->precision()) {
         // b.digits is longer than this->digits
         if (b.digits[rightidx] != 0) {
-            return !this->sign;
+            return !this->sign();
         }
         ++rightidx;
     }
 
-    while (leftidx < this->_precision) {
+    while (leftidx < this->precision()) {
         if (this->digits[leftidx] != b.digits[rightidx]) {
-            return this->sign ^ (this->digits[leftidx] < b.digits[rightidx]);
+            return this->sign() ^ (this->digits[leftidx] < b.digits[rightidx]);
         }
         ++leftidx;
         ++rightidx;
@@ -211,16 +472,20 @@ bool Binary::operator>=(const Binary& b) const {
     return !(*this < b);
 }
 
-void Binary::setPrecision(std::size_t prec) {
-    if (prec == _precision) { return; }
-    if (prec > _precision) {
-        digits.insert(digits.begin(), prec - _precision, false);
-    } else {
-        // will shrink the binary without checking for ones
-        digits.erase(digits.begin(), digits.begin() + (_precision - prec));
-    }
+Binary Binary::operator<<(const std::size_t n) const {
+    std::vector<bool> result = this->digits;
+    result.insert(result.end(), n, 0);
+    return Binary(result);
+}
 
-    _precision = prec;
+Binary Binary::operator>>(const std::size_t n) const {
+    if (n >= this->precision()) {
+        // return a binary with 0 precision
+        return Binary(0);
+    }
+    std::vector<bool> result = this->digits;
+    result.erase(result.end() - n, result.end());
+    return Binary(result);
 }
 
 
@@ -400,7 +665,7 @@ void Binary::setPrecision(std::size_t prec) {
 //    return reachedNums;
 //}
 //
-//void LMPA::setPrecision(std::size_t prec) {
+//void LMPA::set_precision(std::size_t prec) {
 //    if (prec < precision) {
 //        post_digits = post_digits.substr(0, prec);
 //    } else {

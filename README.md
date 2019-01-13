@@ -1,5 +1,5 @@
 # LMPA
-Lightweight Multiple Precision Arithmetic Library for C++, outisde UNIX
+Lightweight Multiple Precision Arithmetic Library for C++, for Windows and UNIX
 
 This Library uses strings to extend upon the precision of primitive arithmetic types in C++.
 
