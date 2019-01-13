@@ -2,6 +2,7 @@
 // Created by Lars on 16/12/2018.
 //
 #include "../LMPA/LMPA.h"
+#include "../LMPA/Binary.h"
 
 #include <chrono> // benchmarking
 
@@ -9,27 +10,31 @@
 
 #include <functional>
 
+#include "UnitTests.h"
+
 template<typename T, typename... Args>
 double benchmark(T function, Args&&... args) {
     // call with std::bind to use this on class member functions
     auto starttime = std::chrono::high_resolution_clock::now();
     function(std::forward<Args>(args)...);
     auto endtime = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(starttime - endtime).count();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
 }
 
 int main() {
 
-    std::vector<bool> avec;
-    std::vector<bool> bvec;
-    std::vector<bool> cvec;
-    std::vector<bool> dvec;
-    std::vector<bool> resultvec;
+    UnitTests::run();
 
-    std::vector<bool> testvec = {1, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+    Binary::container_type avec;
+    Binary::container_type bvec;
+    Binary::container_type cvec;
+    Binary::container_type dvec;
+    Binary::container_type resultvec;
 
-    avec = {1, 1, 1, 1, 1, 1, 1, 0}; // 2
-    bvec = {0, 1, 0, 0, 1}; // 9
+    Binary::container_type testvec = {1, 1, 1, 0}; // -2
+
+    avec = {1, 1, 0, 0}; // -4
+    bvec = {1, 1, 0, 0}; // -4
 
     cvec = {0, 0, 0, 0, 1, 0, 0, 0, 0}; // 16
     dvec = {0, 0, 1, 0, 0, 1}; // 9
@@ -46,20 +51,31 @@ int main() {
 
     Binary testbin(testvec);
 
-//    testbin.reserve(128);
-//    a.reserve(128);
+    constexpr std::size_t prec = 8;
 
-//    std::cout << benchmark(std::bind(&Binary::print, testbin)) << std::endl;
+    a.reserve(prec);
+    b.reserve(prec);
 
-    for (int i = 0; i < 1; ++i) {
-        a = testbin * a;
-    }
+//    constexpr std::size_t n = 1;
+
+//    std::cout << "Operator+= took " << benchmark(
+//            [&]() -> void {
+//                for (std::size_t i = 0; i < n; ++i) {
+//                    a += b;
+//                }
+//            }
+//            ) << " ms." << std::endl;
+
+//    std::cout << std::endl << "------------------------------------------------------------------------" << std::endl;
+//    a.print();
+//    std::cout << std::endl << "------------------------------------------------------------------------" << std::endl;
+//    b.print();
 
 //    a.shrink_to_fit();
-    a.print();
-
-    std::cout << a << std::endl;
-    std::cout << "Precision: " << a.precision() << std::endl;
+//    a.print();
+//
+//    std::cout << a << std::endl;
+//    std::cout << "Precision: " << a.precision() << std::endl;
 
 
 //    Binary result(resultvec);
