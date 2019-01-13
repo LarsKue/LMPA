@@ -10,9 +10,10 @@ Currently supported are:
 4. Easy output of numbers
 
 Planned for future support are:
-1. Arithmetic operations * and / as well as %
-2. Logical operations
-3. Assignment operations
+1. Faster operations using boolean vectors instead of strings
+2. Arithmetic operations * and / as well as %
+3. Logical operations
+4. Assignment operations
 
 
 **Installation (using CMake):**
