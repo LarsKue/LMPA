@@ -14,7 +14,7 @@ This Library uses standard containers to extend upon the precision of primitive 
 5. Easily changeable precision of Binaries
 6. Easy Output of Binaries
 
-Planned for future support are:
+**Planned for future support are:**
 1. Complete Support for all Arithmetic Operations
 2. Binary-Based Multi-Precision Integers and Floating Point Numbers
 
