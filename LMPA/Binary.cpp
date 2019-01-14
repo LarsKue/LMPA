@@ -26,10 +26,9 @@ Binary::Binary() noexcept : digits(32, 0) {
 }
 
 /**
- * \brief Constructor with user-specified precision.
+ * \brief Constructor with user-specified precision. The object's value will be 0.
  */
 Binary::Binary(size_type precision) noexcept : digits(precision, 0) {
-    // generates a Binary with specific precision of value 0
 }
 
 /**
@@ -68,7 +67,7 @@ Binary::Binary(const container_type& d, _type sgn) noexcept : digits(d) {
 /// Utility ///
 
 /**
- * \brief will set the precision to the given size without any further checks for value
+ * \brief Will set the precision to the given size without any further checks for value.
  */
 void Binary::set_precision(size_type prec) {
     if (prec == precision()) { return; }
@@ -84,8 +83,8 @@ void Binary::set_precision(size_type prec) {
 }
 
 /**
- * \brief will lower the Binary's precision as much as possible without altering its value
- * Calling this function on a Binary with 0 precision yields undefined behavior
+ * \brief Will lower the Binary's precision as much as possible without altering its value.
+ * Calling this function on a Binary with 0 precision yields undefined behavior.
  */
 void Binary::shrink_to_fit() {
     // remove all but one of the leading values that are the same as the sign
@@ -310,7 +309,7 @@ Binary Binary::operator++() {
 }
 
 /**
- * \brief Prefix-Decrement Operator
+ * \brief Prefix-Decrement Operator.
  */
 Binary Binary::operator--() {
     // prefix
