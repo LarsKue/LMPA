@@ -19,19 +19,32 @@ namespace {
 
 /// Constructors ///
 
+/**
+ * \brief Default Constructor. Generates a standard 32 bit precision number of value 0
+ */
 Binary::Binary() noexcept : digits(32, 0) {
-    // generates a standard 32 bit precision number of value 0
 }
 
+/**
+ * \brief Constructor with user-specified precision.
+ */
 Binary::Binary(size_type precision) noexcept : digits(precision, 0) {
     // generates a Binary with specific precision of value 0
 }
 
+/**
+ * \brief Constructor with user-specified bits, precision is deduced automatically.
+ * Will assume bits are in Two's-Complement.
+ */
 Binary::Binary(const container_type& d) noexcept : digits(d) {
     // assumes d already contains the sign
     _precision = digits.size();
 }
 
+/**
+ * \brief Constructor with user-specified bits and a separate sign.
+ * Will assume bits are in Two's-Complement.
+ */
 Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
     if (sgn == 1) { digits.insert(std::begin(digits), positive); }
     else if (sgn == -1) { digits.insert(std::begin(digits), negative); }
@@ -42,6 +55,10 @@ Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
     _precision = digits.size();
 }
 
+/**
+ * \brief Constructor with user-specified bits and a separate sign.
+ * Will assume bits are in Two's-Complement.
+ */
 Binary::Binary(const container_type& d, _type sgn) noexcept : digits(d) {
     digits.insert(std::begin(digits), sgn);
     _precision = digits.size();
@@ -81,7 +98,7 @@ void Binary::shrink_to_fit() {
 }
 
 /**
- * \brief ensures the precision is at least n without altering the value
+ * \brief Ensures the precision is at least n without altering the value.
  */
 void Binary::reserve(size_type n) {
     if (precision() < n) {
@@ -90,15 +107,30 @@ void Binary::reserve(size_type n) {
     }
 }
 
+/**
+ * \brief Flips all bits.
+ */
 void Binary::flip() {
     for (auto& b : digits) {
         b = static_cast<_type>(!b);
     }
 }
 
+/**
+ * \brief Sets the object's value to 0 without altering its precision.
+ */
+void Binary::clear() {
+    for (auto& b : digits) {
+        b = 0;
+    }
+}
+
 
 /// Assignment ///
 
+/**
+ * \brief Assignment Operator. Will promote the assigned-to object accordingly.
+ */
 Binary& Binary::operator=(const Binary& b) {
     if (this == &b) {
         return *this;
@@ -122,6 +154,9 @@ Binary& Binary::operator=(const Binary& b) {
     return *this;
 }
 
+/**
+ * \brief Move assignment operator. Will promote the assigned-to object accordingly.
+ */
 Binary& Binary::operator=(Binary&& b) noexcept {
     if (this == &b) {
         return *this;
@@ -148,6 +183,9 @@ Binary& Binary::operator=(Binary&& b) noexcept {
     return *this;
 }
 
+/**
+ * \brief Addition Assignment Operator. Will promote the assigned-to object accordingly.
+ */
 Binary& Binary::operator+=(const Binary& b) {
     // promote this to the higher precision of the two
     this->reserve(std::max(this->precision(), b.precision()));
@@ -177,10 +215,16 @@ Binary& Binary::operator+=(const Binary& b) {
     return *this;
 }
 
+/**
+ * \brief Subtraction Assignment Operator. See Implementation for operator+=
+ */
 Binary& Binary::operator-=(const Binary& b) {
     return *this += (-b);
 }
 
+/**
+ * \brief Multiplication Assignment Operator. Will promote the assigned-to object accordingly.
+ */
 Binary& Binary::operator*=(const Binary& b) {
     // promote this to the higher precision of the two
     this->reserve(std::max(this->precision(), b.precision()));
@@ -228,7 +272,7 @@ Binary& Binary::operator*=(const Binary& b) {
 }
 
 /**
- * will promote this by n digits
+ * \brief Left-Shift Assignment Operator. Will promote the assigned-to object by n digits.
  */
 Binary& Binary::operator<<=(const size_type n) {
     digits.insert(std::end(digits), n, 0);
@@ -237,8 +281,8 @@ Binary& Binary::operator<<=(const size_type n) {
 }
 
 /**
- * will not alter the precision of this
- * if n is greater than the precision, this will yield undefined behavior
+ * \brief Right-Shift Assignment Operator. Will not alter the object's precision.
+ * If n is greater than the object's precision, the behavior is undefined.
  */
 Binary& Binary::operator>>=(const size_type n) {
     digits.erase(std::begin(digits) + n, std::end(digits));
@@ -249,6 +293,9 @@ Binary& Binary::operator>>=(const size_type n) {
 
 /// Increment, Decrement ///
 
+/**
+ * \brief Prefix-Increment Operator.
+ */
 Binary Binary::operator++() {
     // prefix
     // add one to the vector
@@ -262,6 +309,9 @@ Binary Binary::operator++() {
     return *this;
 }
 
+/**
+ * \brief Prefix-Decrement Operator
+ */
 Binary Binary::operator--() {
     // prefix
     // subtract one from the vector
@@ -275,6 +325,9 @@ Binary Binary::operator--() {
     return *this;
 }
 
+/**
+ * \brief Postfix-Increment Operator.
+ */
 const Binary Binary::operator++(int) {
     // postfix
     Binary result = *this;
@@ -282,6 +335,9 @@ const Binary Binary::operator++(int) {
     return result;
 }
 
+/**
+ * \brief Postfix-Decrement Operator.
+ */
 const Binary Binary::operator--(int) {
     // postfix
     Binary result = *this;
@@ -292,12 +348,16 @@ const Binary Binary::operator--(int) {
 
 /// Arithmetic ///
 
-// does basically nothing
+/**
+ * \brief This does nothing.
+ */
 Binary Binary::operator+() const {
     return *this;
 }
 
-// inverts the sign
+/**
+ * \brief Inerts the sign of a copy of the Binary.
+ */
 Binary Binary::operator-() const {
     container_type result = digits;
     // flip all bits
@@ -318,6 +378,9 @@ Binary Binary::operator-() const {
 
 }
 
+/**
+ * \brief Addition Operator. The result will be of the maximum precision of the two arguments.
+ */
 Binary Binary::operator+(const Binary& b) const {
     // iterate from right to left, iterators must always point one to the right of the current element
     auto leftiter = std::end(digits);
@@ -355,10 +418,16 @@ Binary Binary::operator+(const Binary& b) const {
     return Binary(result);
 }
 
+/**
+ * \brief Subtraction Operator. See Implementation for operator+
+ */
 Binary Binary::operator-(const Binary& b) const {
     return *this + (-b);
 }
 
+/**
+ * \brief Multiplication Operator. The result will be of the maximum precision of the two arguments.
+ */
 Binary Binary::operator*(const Binary& b) const {
     auto rightiter = std::end(b.digits);
 
@@ -404,6 +473,9 @@ Binary Binary::operator*(const Binary& b) const {
     return Binary(result);
 }
 
+/**
+ * \brief Stream Output Operator. Will either print Two's-Complement or a Signed Binary, depending on printmode.
+ */
 std::ostream& operator<<(std::ostream& stream, const Binary& b) {
     if (b.printmode == Binary::PrintModes::Signed) {
         // show as regular binary number with sign instead of first bit
@@ -426,6 +498,11 @@ std::ostream& operator<<(std::ostream& stream, const Binary& b) {
     return stream;
 }
 
+/// Logical ///
+
+/**
+ * \brief Comparison Operator. Compares bit by bit.
+ */
 bool Binary::operator==(const Binary& b) const {
     if (this->sign() != b.sign()) {
         return false;
@@ -454,10 +531,16 @@ bool Binary::operator==(const Binary& b) const {
     return true;
 }
 
+/**
+ * \brief Anti-Comparison-Operator. See Implementation for operator==
+ */
 bool Binary::operator!=(const Binary& b) const {
     return !(*this == b);
 }
 
+/**
+ * \brief Left-Hand-Comparison Operator. Compares bit by bit.
+ */
 bool Binary::operator<(const Binary& b) const {
     // compare signs first
     if (!this->sign() && b.sign()) {
@@ -499,36 +582,43 @@ bool Binary::operator<(const Binary& b) const {
 }
 
 // Todo: optimize by writing out the entire algorithm
+/**
+ * \brief Right-Hand-Comparison Operator. See Implementation for operator== and operator<
+ */
 bool Binary::operator>(const Binary& b) const {
     return (!(*this < b) && !(*this == b));
 }
 
+/**
+ * \brief Left-Hand-Equality-Comparison Operator. See Implementation for operator>
+ */
 bool Binary::operator<=(const Binary& b) const {
     return !(*this > b);
 }
 
+/**
+ * \brief Right-Hand-Equality-Comparison Operator. See Implementation for operator<
+ */
 bool Binary::operator>=(const Binary& b) const {
     return !(*this < b);
 }
 
+/**
+ * \brief Left-Shift-Operator. Will Promote the copy by n digits.
+ */
 Binary Binary::operator<<(const size_type n) const {
     container_type result = this->digits;
     result.insert(result.end(), n, 0);
     return Binary(result);
 }
 
+/**
+ * \brief Right-Shift-Operator. Will keep the copy's precision the same as the object's.
+ * If n is greater than the object's precision, the behavior is undefined.
+ */
 Binary Binary::operator>>(const size_type n) const {
-    if (n >= this->precision()) {
-        // return smallest valid binary
-        return Binary(1);
-    }
     container_type result = this->digits;
-    result.erase(result.end() - n, result.end());
+    result.erase(std::end(result) - n, std::end(result));
+    result.insert(std::begin(result), n, 0);
     return Binary(result);
-}
-
-void Binary::clear() {
-    for (auto& b : digits) {
-        b = 0;
-    }
 }
