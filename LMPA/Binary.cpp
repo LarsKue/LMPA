@@ -8,8 +8,6 @@
 #include <algorithm> // reverse
 #include <limits> // size_type max
 
-/// Binary Implementation ///
-
 namespace {
     // Binary sign definitions
     constexpr Binary::_type negative = 1;

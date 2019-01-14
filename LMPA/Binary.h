@@ -5,9 +5,8 @@
 #ifndef LMPA_LIBRARY_BINARY_H
 #define LMPA_LIBRARY_BINARY_H
 
-#include <vector> // container
-#include <cstddef> // size_type
-#include <iostream> // operator<< stream overload
+#include <vector> // container, size_t
+#include <iostream> // operator<< stream overload, size_t
 
 class Binary {
 public:
@@ -84,7 +83,7 @@ public:
     bool operator!() const;
     bool operator&&(const Binary& b) const;
     bool operator||(const Binary& b) const;
-    // bitwise logical -- Consider returning Binaries here instead of bool
+    // bitwise logical -- Consider returning Binaries here instead / on top of bool
     bool operator&(const Binary& b) const;
     bool operator|(const Binary& b) const;
 
