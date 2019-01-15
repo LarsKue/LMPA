@@ -7,10 +7,16 @@
 
 #include <vector> // container, size_t
 #include <iostream> // operator<< stream overload, size_t
+#include <deque>
+
+class LMPA;
 
 class Binary {
+
+    friend class LMPA;
+
 public:
-    typedef unsigned char _type;
+    typedef bool _type;
     typedef std::size_t size_type;
     // has to be a dynamic container
     typedef std::vector<_type> container_type;
@@ -23,7 +29,7 @@ public:
     explicit Binary(const container_type& d, _type sgn) noexcept;
 
     Binary(const Binary& b) = default;
-    Binary(Binary&& b) noexcept = default;
+    Binary(Binary&& b) = default;
 
     ~Binary() = default;
 
@@ -36,6 +42,7 @@ public:
     void reserve(size_type n);
     void flip();
     void clear(); // keeps precision intact while setting value to 0
+    Binary absVal() const;
 
     enum class PrintModes {
         Twos_Complement,
@@ -99,7 +106,7 @@ public:
     friend std::ostream& operator<< (std::ostream& stream, const Binary& b);
 
     // for debug purposes
-    void print() {
+    void print() const {
         for (const _type b : digits) {
             std::cout << static_cast<bool>(b) << ", ";
         }

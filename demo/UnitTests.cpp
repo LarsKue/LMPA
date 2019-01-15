@@ -78,7 +78,8 @@ bool UnitTests::Minus() {
 
     Binary result({1, 1, 0, 0, 1, 1, 0, 1}); // 27 - 78 = -51
 
-    return a - b == result;
+    (a - b).print();
+    return (a - b) == result;
 }
 
 bool UnitTests::MinusEquals() {
@@ -111,11 +112,24 @@ bool UnitTests::TimesEquals() {
 
 bool UnitTests::Divide() {
     // TODO: Implement
-    return true;
+
+    Binary a({0, 0, 0, 0, 1, 1, 0, 1, 1, 1}); // 55
+    Binary b({0, 0, 0, 0, 0, 0, 0, 1, 0, 1}); // 5
+
+    Binary result({0, 0, 0, 0, 0, 0, 1, 0, 1, 1});
+    return a / b == result;
+//    return true;
 }
 
 bool UnitTests::DivideEquals() {
     // TODO: Implement
+
+//    Binary a({0, 0, 0, 0, 1, 1, 0, 1, 1, 1}); // 55
+//    Binary b({0, 0, 0, 0, 0, 0, 0, 1, 0, 1}); // 5
+//
+//    Binary result({0, 0, 0, 0, 0, 0, 1, 0, 1, 1});
+//    a /= b;
+//    return a == result;
     return true;
 }
 
@@ -158,9 +172,9 @@ bool UnitTests::SmallerThan() {
 
 bool UnitTests::Other() {
     // dynamically test += vs * etc.
-    Binary a({1, 0}); // 2
-    Binary b({0, 1}); // 1
-    Binary result({1, 0}); // 2
+    Binary a({0, 1, 0}); // 2
+    Binary b({0, 0, 1}); // 1
+    Binary result({0, 1, 0}); // 2
     a.reserve(256);
     b.reserve(256);
     result.reserve(256);

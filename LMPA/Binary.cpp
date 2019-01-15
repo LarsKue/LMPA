@@ -26,7 +26,7 @@ Binary::Binary() noexcept : digits(32, 0) {
 /**
  * \brief Constructor with user-specified precision. The object's value will be 0.
  */
-Binary::Binary(size_type precision) noexcept : digits(precision, 0) {
+Binary::Binary(size_type precision) noexcept :  _precision(precision), digits(precision, 0) {
 }
 
 /**
@@ -108,18 +108,28 @@ void Binary::reserve(size_type n) {
  * \brief Flips all bits.
  */
 void Binary::flip() {
-    for (auto& b : digits) {
-        b = static_cast<_type>(!b);
-    }
+//    for (auto& b : digits) {
+//        b = static_cast<_type>(!b);
+//    }
+    digits.flip();
 }
 
 /**
  * \brief Sets the object's value to 0 without altering its precision.
  */
 void Binary::clear() {
-    for (auto& b : digits) {
+//    for (auto& b : digits) {
+//        b = 0;
+//    }
+    for (auto b : digits) {
         b = 0;
     }
+}
+
+Binary Binary::absVal() const {
+    container_type result = this->digits;
+    *(std::begin(result)) = positive;
+    return Binary(result);
 }
 
 
@@ -358,9 +368,10 @@ Binary Binary::operator+() const {
 Binary Binary::operator-() const {
     container_type result = digits;
     // flip all bits
-    for (auto& b : result) {
-        b = static_cast<_type>(!b);
-    }
+    result.flip();
+//    for (auto& b : result) {
+//        b = static_cast<_type>(!b);
+//    }
 
     // add one to the vector
     for (auto iter = std::end(result); iter-- > std::begin(result); /* no increment */) {
@@ -384,6 +395,8 @@ Binary Binary::operator+(const Binary& b) const {
     auto rightiter = std::end(b.digits);
 
     container_type result;
+    // TODO: if using container_type == std::vector, put this back in
+    // Consider making macros for this
     result.reserve(std::max(this->precision(), b.precision()));
 
     bool add = false;
@@ -471,6 +484,32 @@ Binary Binary::operator*(const Binary& b) const {
 }
 
 /**
+ * \brief Division Operator. The result will be of the maximum precision of the two arguments.
+ */
+Binary Binary::operator/(const Binary& b) const {
+    // initialize result to 0
+    Binary intermediate(*this);
+    Binary counter(std::max(this->precision(), b.precision()));
+
+    while (intermediate >= b) {
+        intermediate -= b;
+        ++counter;
+    }
+
+    return counter;
+
+
+    // slow method
+//    Binary a = this->absVal();
+//    Binary result(std::max(this->precision(), b.precision()));
+//    while (a != Binary(1)) {
+//        a -= b.absVal();
+//        ++result;
+//    }
+//    return this->sign() == b.sign() ? result : -result;
+}
+
+/**
  * \brief Stream Output Operator. Will either print Two's-Complement or a Signed Binary, depending on printmode.
  */
 std::ostream& operator<<(std::ostream& stream, const Binary& b) {
@@ -498,7 +537,7 @@ std::ostream& operator<<(std::ostream& stream, const Binary& b) {
 /// Logical ///
 
 /**
- * \brief Comparison Operator. Compares bit by bit.
+ * \brief Comparison Operator. Compares bit by bit from the right.
  */
 bool Binary::operator==(const Binary& b) const {
     if (this->sign() != b.sign()) {
@@ -514,13 +553,13 @@ bool Binary::operator==(const Binary& b) const {
         }
     }
     while (leftiter-- > std::begin(this->digits) + 1) {
-        if (*leftiter) {
+        if (*leftiter != b.sign()) {
             return false;
         }
     }
 
     while (rightiter-- > std::begin(b.digits) + 1) {
-        if (*rightiter) {
+        if (*rightiter != this->sign()) {
             return false;
         }
     }
@@ -541,27 +580,29 @@ bool Binary::operator!=(const Binary& b) const {
 bool Binary::operator<(const Binary& b) const {
     // compare signs first
     if (!this->sign() && b.sign()) {
+        // this is positive, b is negative
         return false;
     } else if (this->sign() && !b.sign()) {
+        // this is negative, b is positive
         return true;
     }
 
     auto leftiter = std::begin(this->digits);
     auto rightiter = std::begin(b.digits);
 
-    // these while loops account for leading zeroes
+    // these while loops account for leading signs
     while (this->precision() - (leftiter - std::begin(digits)) > b.precision()) {
         // this->digits is longer than b.digits
-        if (*leftiter) {
-            return this->sign();
+        if (*leftiter != this->sign()) {
+            return false;
         }
         ++leftiter;
     }
 
     while (b.precision() - (rightiter - std::begin(b.digits)) > this->precision()) {
         // b.digits is longer than this->digits
-        if (*rightiter) {
-            return !this->sign();
+        if (*rightiter != b.sign()) {
+            return false;
         }
         ++rightiter;
     }
