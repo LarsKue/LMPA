@@ -10,8 +10,8 @@
 
 namespace {
     // Binary sign definitions
-    constexpr Binary::_type negative = 1;
-    constexpr Binary::_type positive = 0;
+    constexpr Binary::value_type negative = 1;
+    constexpr Binary::value_type positive = 0;
 }
 
 
@@ -56,7 +56,7 @@ Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
  * \brief Constructor with user-specified bits and a separate sign.
  * Will assume bits are in Two's-Complement.
  */
-Binary::Binary(const container_type& d, _type sgn) noexcept : digits(d) {
+Binary::Binary(const container_type& d, value_type sgn) noexcept : digits(d) {
     digits.insert(std::begin(digits), sgn);
     _precision = digits.size();
 }
@@ -66,6 +66,8 @@ Binary::Binary(const container_type& d, _type sgn) noexcept : digits(d) {
 
 /**
  * \brief Will set the precision to the given size without any further checks for value.
+ * Will shrink the binary from the front, or add to it at the front, to prevent altering values
+ * as much as possible.
  */
 void Binary::set_precision(size_type prec) {
     if (prec == precision()) { return; }
@@ -74,7 +76,7 @@ void Binary::set_precision(size_type prec) {
         digits.insert(std::begin(digits), prec - precision(), this->sign());
     } else {
         // will shrink the binary without checking for ones, thus possibly altering the value
-        digits.erase(std::begin(digits), std::begin(digits) + precision() - prec);
+        digits.erase(std::begin(digits), std::end(digits) - prec);
     }
 
     _precision = prec;
@@ -109,7 +111,7 @@ void Binary::reserve(size_type n) {
  */
 void Binary::flip() {
 //    for (auto& b : digits) {
-//        b = static_cast<_type>(!b);
+//        b = static_cast<value_type>(!b);
 //    }
     digits.flip();
 }
@@ -204,7 +206,7 @@ Binary& Binary::operator+=(const Binary& b) {
     bool add = false;
 
     while (leftiter > std::begin(this->digits) + 1 && rightiter > std::begin(b.digits) + 1) {
-        _type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
+        value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
         add = ( *(leftiter - 1) + *(rightiter - 1) + add ) > 1;
         *(leftiter - 1) = sum;
         --leftiter;
@@ -213,7 +215,7 @@ Binary& Binary::operator+=(const Binary& b) {
 
     while (leftiter > std::begin(this->digits)) {
         // this can be of higher precision than b, but not the other way around
-        _type sum = *(leftiter - 1) ^ add ^ b.sign();
+        value_type sum = *(leftiter - 1) ^ add ^ b.sign();
         add = (*(leftiter - 1) + add + b.sign()) > 1;
         *(leftiter - 1) = sum;
         --leftiter;
@@ -267,7 +269,7 @@ Binary& Binary::operator*=(const Binary& b) {
 
         bool add = false;
         while (leftiter > std::begin(digits) && rightiter > std::begin(vec)) {
-            _type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
+            value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
             add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
             *(leftiter - 1) = sum;
             --leftiter;
@@ -279,11 +281,13 @@ Binary& Binary::operator*=(const Binary& b) {
 }
 
 /**
- * \brief Left-Shift Assignment Operator. Will promote the assigned-to object by n digits.
+ * \brief Left-Shift Assignment Operator. Will not alter the object's precision.
+ * If n is g reater than the object's precision, the behavior is undefined.
  */
 Binary& Binary::operator<<=(const size_type n) {
+    // Consider promoting
+    digits.erase(std::begin(digits), std::begin(digits) + n);
     digits.insert(std::end(digits), n, 0);
-    this->_precision = digits.size();
     return *this;
 }
 
@@ -370,7 +374,7 @@ Binary Binary::operator-() const {
     // flip all bits
     result.flip();
 //    for (auto& b : result) {
-//        b = static_cast<_type>(!b);
+//        b = static_cast<value_type>(!b);
 //    }
 
     // add one to the vector
@@ -410,7 +414,7 @@ Binary Binary::operator+(const Binary& b) const {
 
     // get the sign of the shorter number and "pad" the number with it
     // also need to decrement the corresponding index by one to prevent double calculation in below while statements
-    _type buffer = (this->precision() > b.precision()) ? (*(--rightiter)) : (*(--leftiter));
+    value_type buffer = (this->precision() > b.precision()) ? (*(--rightiter)) : (*(--leftiter));
 
     while (leftiter > std::begin(digits)) {
         result.emplace_back(*(leftiter - 1) ^ buffer ^ add);
@@ -439,6 +443,8 @@ Binary Binary::operator-(const Binary& b) const {
  * \brief Multiplication Operator. The result will be of the maximum precision of the two arguments.
  */
 Binary Binary::operator*(const Binary& b) const {
+    // TODO: Consider using shifts to multiply as seen here: https://www.cs.utah.edu/~rajeev/cs3810/slides/3810-08.pdf
+
     auto rightiter = std::end(b.digits);
 
     std::vector<container_type> sums;
@@ -472,7 +478,7 @@ Binary Binary::operator*(const Binary& b) const {
 
         bool add = false;
         while (leftiter > std::begin(result) && rightiter > std::begin(vec)) {
-            _type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
+            value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
             add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
             *(leftiter - 1) = sum;
             --leftiter;
@@ -485,28 +491,52 @@ Binary Binary::operator*(const Binary& b) const {
 
 /**
  * \brief Division Operator. The result will be of the maximum precision of the two arguments.
+ * May throw if the divisor has a value of 0.
  */
-Binary Binary::operator/(const Binary& b) const {
-    // initialize result to 0
-    Binary intermediate(*this);
-    Binary counter(std::max(this->precision(), b.precision()));
-
-    while (intermediate >= b) {
-        intermediate -= b;
-        ++counter;
+Binary Binary::operator/(const Binary& b) const noexcept(false) {
+    bool divbyzero = true;
+    for (const value_type d : b.digits) {
+        if (d) {
+            divbyzero = false;
+            break;
+        }
     }
 
-    return counter;
+    if (divbyzero) {
+        throw div_by_zero_error();
+    }
 
+    // initialize result to b's sign
+    container_type result;
 
-    // slow method
-//    Binary a = this->absVal();
-//    Binary result(std::max(this->precision(), b.precision()));
-//    while (a != Binary(1)) {
-//        a -= b.absVal();
-//        ++result;
-//    }
-//    return this->sign() == b.sign() ? result : -result;
+    Binary divisor(container_type(1, b.sign()));
+
+    auto leftiter = std::begin(this->digits);
+
+    while (divisor.precision() < this->precision()) {
+        if (divisor < b) {
+            result.emplace_back(0);
+            divisor.digits.emplace_back(*++leftiter);
+            ++divisor._precision;
+            continue;
+        }
+        result.emplace_back(1);
+        size_type tempprec = divisor.precision();
+        divisor -= b;
+        // divisor's precision was promoted by -= so we have to reset it
+        divisor.set_precision(tempprec);
+        divisor.digits.emplace_back(*++leftiter);
+        ++divisor._precision;
+    }
+
+    if (divisor < b) {
+        result.emplace_back(0);
+    } else {
+        result.emplace_back(1);
+    }
+
+    return Binary(result);
+
 }
 
 /**
@@ -594,7 +624,7 @@ bool Binary::operator<(const Binary& b) const {
     while (this->precision() - (leftiter - std::begin(digits)) > b.precision()) {
         // this->digits is longer than b.digits
         if (*leftiter != this->sign()) {
-            return false;
+            return !this->sign();
         }
         ++leftiter;
     }
@@ -602,7 +632,7 @@ bool Binary::operator<(const Binary& b) const {
     while (b.precision() - (rightiter - std::begin(b.digits)) > this->precision()) {
         // b.digits is longer than this->digits
         if (*rightiter != b.sign()) {
-            return false;
+            return !b.sign();
         }
         ++rightiter;
     }

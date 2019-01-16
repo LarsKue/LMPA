@@ -8,6 +8,8 @@
 #include <cassert>
 
 void UnitTests::run() {
+    assert(SmallerThan());
+    std::cout << "Successfully Passed Test SmallerThan" << std::endl;
     assert(Invert());
     std::cout << "Successfully Passed Test Invert" << std::endl;
     assert(Plus());
@@ -34,8 +36,6 @@ void UnitTests::run() {
     std::cout << "Successfully Passed Test PreDecrement" << std::endl;
     assert(PostDecrement());
     std::cout << "Successfully Passed Test PostDecrement" << std::endl;
-    assert(SmallerThan());
-    std::cout << "Successfully Passed Test SmallerThan" << std::endl;
 
 
     assert(Other());
@@ -78,7 +78,6 @@ bool UnitTests::Minus() {
 
     Binary result({1, 1, 0, 0, 1, 1, 0, 1}); // 27 - 78 = -51
 
-    (a - b).print();
     return (a - b) == result;
 }
 
@@ -117,8 +116,8 @@ bool UnitTests::Divide() {
     Binary b({0, 0, 0, 0, 0, 0, 0, 1, 0, 1}); // 5
 
     Binary result({0, 0, 0, 0, 0, 0, 1, 0, 1, 1});
+
     return a / b == result;
-//    return true;
 }
 
 bool UnitTests::DivideEquals() {
@@ -172,18 +171,38 @@ bool UnitTests::SmallerThan() {
 
 bool UnitTests::Other() {
     // dynamically test += vs * etc.
+//    Binary a({0, 1, 0}); // 2
+//    Binary b({0, 0, 1}); // 1
+//    Binary result({0, 1, 0}); // 2
+//    a.reserve(256);
+//    b.reserve(256);
+//    result.reserve(256);
+//
+//    for (std::size_t i = 0; i < 1000; ++i) {
+//        if (a * b != result) { return false; }
+//        ++b;
+//        result += a;
+//    }
+
+
+    // dynamically test / vs *
     Binary a({0, 1, 0}); // 2
-    Binary b({0, 0, 1}); // 1
-    Binary result({0, 1, 0}); // 2
-    a.reserve(256);
-    b.reserve(256);
-    result.reserve(256);
+    Binary b({0, 1, 1}); // 3
 
-    for (std::size_t i = 0; i < 1000; ++i) {
-        if (a * b != result) { return false; }
-        ++b;
-        result += a;
+    constexpr Binary::size_type prec = 512;
+    a.reserve(prec);
+    b.reserve(prec);
+
+    // at least 2 extra bits necessary to hold the result from the multiplication of a and b
+    for (std::size_t i = 0; i < prec - 3; ++i) {
+        if (((a * b) / b) != a) {
+            a.print();
+            b.print();
+            std::cout << "Test Failed at: i = " << i << std::endl;
+            return false;
+        }
+
+        a *= Binary({0, 1, 0}); // 2
     }
-
     return true;
 }

@@ -117,7 +117,7 @@
 //    while (i < minSize) {
 //        int sum = this->pre_digits[i] + m.pre_digits[i] + add_subtract;
 //        add_subtract = this->pre_digits[i] && m.pre_digits[i];
-//        result.emplace_back(static_cast<_type>(sum % 2));
+//        result.emplace_back(static_cast<value_type>(sum % 2));
 //        ++i;
 //    }
 //
@@ -125,7 +125,7 @@
 //        while (i < maxSize) {
 //            int sum = this->pre_digits[i] + add_subtract;
 //            add_subtract = this->pre_digits[i] && add_subtract;
-//            result.emplace_back(static_cast<_type>(sum % 2));
+//            result.emplace_back(static_cast<value_type>(sum % 2));
 //            ++i;
 //        }
 //    }
@@ -133,7 +133,7 @@
 //        while (i < maxSize) {
 //            int sum = m.pre_digits[i] + add_subtract;
 //            add_subtract = m.pre_digits[i] && add_subtract;
-//            result.emplace_back(static_cast<_type>(sum % 2));
+//            result.emplace_back(static_cast<value_type>(sum % 2));
 //            ++i;
 //        }
 //    }
@@ -159,9 +159,9 @@
 // * Note that e.g. ".02" is an invalid string, whereas "0.02" is valid.
 // * @return whether the string is valid
 // */
-//_type LMPA::checkString(const std::string& s) {
-//    _type reachedNums = false;
-//    _type reachedDecimal = false;
+//value_type LMPA::checkString(const std::string& s) {
+//    value_type reachedNums = false;
+//    value_type reachedDecimal = false;
 //    for (const auto c : s) {
 //        // check if c is a sign
 //        if (c == '-' || c == '+') {
