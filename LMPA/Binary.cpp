@@ -3,11 +3,11 @@
 //
 
 #include "Binary.h"
-
-
-#include <algorithm> // reverse
 #include <limits> // size_type max
 
+/**
+ * \brief Locally used functions and variables.
+ */
 namespace {
     // Binary sign definitions
     constexpr Binary::value_type negative = 1;
@@ -26,21 +26,20 @@ Binary::Binary() noexcept : digits(32, 0) {
 /**
  * \brief Constructor with user-specified precision. The object's value will be 0.
  */
-Binary::Binary(size_type precision) noexcept :  _precision(precision), digits(precision, 0) {
+Binary::Binary(size_type precision) noexcept : _precision(precision), digits(precision, 0) {
 }
 
 /**
  * \brief Constructor with user-specified bits, precision is deduced automatically.
- * Will assume bits are in Two's-Complement.
+ * Will assume bits are in Two's-Complement and already contain the sign.
  */
 Binary::Binary(const container_type& d) noexcept : digits(d) {
-    // assumes d already contains the sign
     _precision = digits.size();
 }
 
 /**
  * \brief Constructor with user-specified bits and a separate sign.
- * Will assume bits are in Two's-Complement.
+ * Will assume bits are in Two's-Complement, but without a sign.
  */
 Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
     if (sgn == 1) { digits.insert(std::begin(digits), positive); }
@@ -54,7 +53,7 @@ Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
 
 /**
  * \brief Constructor with user-specified bits and a separate sign.
- * Will assume bits are in Two's-Complement.
+ * Will assume bits are in Two's-Complement, but without a sign.
  */
 Binary::Binary(const container_type& d, value_type sgn) noexcept : digits(d) {
     digits.insert(std::begin(digits), sgn);
@@ -110,28 +109,23 @@ void Binary::reserve(size_type n) {
  * \brief Flips all bits.
  */
 void Binary::flip() {
-//    for (auto& b : digits) {
-//        b = static_cast<value_type>(!b);
-//    }
-    digits.flip();
+    for (auto iter = std::begin(digits); iter != std::end(digits); ++iter) {
+        *iter = !(*iter);
+    }
 }
 
 /**
  * \brief Sets the object's value to 0 without altering its precision.
  */
 void Binary::clear() {
-//    for (auto& b : digits) {
-//        b = 0;
-//    }
-    for (auto b : digits) {
-        b = 0;
+    for (auto iter = std::begin(digits); iter != std::end(digits); ++iter) {
+        *iter = 0;
     }
 }
 
 Binary Binary::absVal() const {
-    container_type result = this->digits;
-    *(std::begin(result)) = positive;
-    return Binary(result);
+    if (this->sign()) { return -*this; }
+    return *this;
 }
 
 
@@ -207,7 +201,7 @@ Binary& Binary::operator+=(const Binary& b) {
 
     while (leftiter > std::begin(this->digits) + 1 && rightiter > std::begin(b.digits) + 1) {
         value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
-        add = ( *(leftiter - 1) + *(rightiter - 1) + add ) > 1;
+        add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
         *(leftiter - 1) = sum;
         --leftiter;
         --rightiter;
@@ -215,7 +209,7 @@ Binary& Binary::operator+=(const Binary& b) {
 
     while (leftiter > std::begin(this->digits)) {
         // this can be of higher precision than b, but not the other way around
-        value_type sum = *(leftiter - 1) ^ add ^ b.sign();
+        value_type sum = *(leftiter - 1) ^add ^b.sign();
         add = (*(leftiter - 1) + add + b.sign()) > 1;
         *(leftiter - 1) = sum;
         --leftiter;
@@ -269,7 +263,7 @@ Binary& Binary::operator*=(const Binary& b) {
 
         bool add = false;
         while (leftiter > std::begin(digits) && rightiter > std::begin(vec)) {
-            value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
+            value_type sum = *(leftiter - 1) ^*(rightiter - 1) ^add;
             add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
             *(leftiter - 1) = sum;
             --leftiter;
@@ -281,11 +275,116 @@ Binary& Binary::operator*=(const Binary& b) {
 }
 
 /**
+ * \brief Division Assignment Operator. Will promote the assigned-to object accordingly.
+ */
+Binary& Binary::operator/=(const Binary& b) noexcept(false) {
+    // TODO: Optimize this (mainly by avoiding copies)
+    bool divbyzero = true;
+    for (const value_type d : b.digits) {
+        if (d) {
+            divbyzero = false;
+            break;
+        }
+    }
+
+    if (divbyzero) {
+        throw div_by_zero_error();
+    }
+
+    // initialize result to b's sign
+    container_type result;
+
+    Binary divisor(container_type(1, b.sign()));
+
+    auto leftiter = std::begin(this->digits);
+
+    while (divisor.precision() < this->precision()) {
+        if (divisor < b) {
+            result.emplace_back(0);
+            divisor.digits.emplace_back(*++leftiter);
+            ++divisor._precision;
+            continue;
+        }
+        result.emplace_back(1);
+        size_type tempprec = divisor.precision();
+        divisor -= b;
+        // divisor's precision was promoted by -= so we have to reset it
+        divisor.set_precision(tempprec);
+        divisor.digits.emplace_back(*++leftiter);
+        ++divisor._precision;
+    }
+
+    if (divisor < b) {
+        result.emplace_back(0);
+    } else {
+        result.emplace_back(1);
+    }
+
+    size_type tempprec = this->precision();
+
+    this->digits = result;
+    this->_precision = this->digits.size();
+    this->reserve(std::max(tempprec, b.precision()));
+
+    return *this;
+}
+
+/**
+ * \brief Modulo Assignment Operator. Will promote the assigned-to object accordingly.
+ */
+Binary& Binary::operator%=(const Binary& b) {
+    // TODO: Optimize this (mainly by avoiding copies)
+    bool divbyzero = true;
+    for (const value_type d : b.digits) {
+        if (d) {
+            divbyzero = false;
+            break;
+        }
+    }
+
+    if (divbyzero) {
+        throw div_by_zero_error();
+    }
+
+    Binary thiscopy(this->absVal()); // TODO: remove redundant copy
+    Binary bcopy(b.absVal());
+
+    // initialize ths temporary divisor with b's sign
+    Binary divisor(container_type(1, 0));
+
+    auto leftiter = std::begin(thiscopy.digits);
+
+    while (divisor.precision() < thiscopy.precision()) {
+        if (divisor < bcopy) {
+            divisor.digits.emplace_back(*++leftiter);
+            ++divisor._precision;
+            continue;
+        }
+        size_type tempprec = divisor.precision();
+        divisor -= bcopy;
+        // divisor's precision was promoted by -= so we have to reset it
+        divisor.set_precision(tempprec);
+        divisor.digits.emplace_back(*++leftiter);
+        ++divisor._precision;
+    }
+
+    if (divisor >= bcopy) {
+        divisor -= bcopy;
+    }
+
+    divisor.reserve(std::max(this->precision(), b.precision()));
+
+    // conventional signs
+    *this = this->sign() ? -divisor : divisor;
+
+    return *this;
+}
+
+/**
  * \brief Left-Shift Assignment Operator. Will not alter the object's precision.
- * If n is g reater than the object's precision, the behavior is undefined.
+ * If n is greater than the object's precision, the behavior is undefined.
  */
 Binary& Binary::operator<<=(const size_type n) {
-    // Consider promoting
     digits.erase(std::begin(digits), std::begin(digits) + n);
     digits.insert(std::end(digits), n, 0);
     return *this;
@@ -296,7 +395,7 @@ Binary& Binary::operator<<=(const size_type n) {
  * If n is greater than the object's precision, the behavior is undefined.
  */
 Binary& Binary::operator>>=(const size_type n) {
-    digits.erase(std::begin(digits) + n, std::end(digits));
+    digits.erase(std::end(digits) - n, std::end(digits));
     digits.insert(std::begin(digits), n, 0);
     return *this;
 }
@@ -399,13 +498,13 @@ Binary Binary::operator+(const Binary& b) const {
     auto rightiter = std::end(b.digits);
 
     container_type result;
-    // TODO: if using container_type == std::vector, put this back in
-    // Consider making macros for this
-    result.reserve(std::max(this->precision(), b.precision()));
+    if (std::is_same<container_type, std::vector<value_type>>::value) {
+        result.reserve(std::max(this->precision(), b.precision()));
+    }
 
     bool add = false;
 
-    while (leftiter > std::begin(digits) + 1 && rightiter > std::begin(digits) + 1) {
+    while (leftiter > std::begin(digits) + 1 && rightiter > std::begin(b.digits) + 1) {
         result.emplace_back(*(leftiter - 1) ^ *(rightiter - 1) ^ add);
         add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
         --leftiter;
@@ -478,7 +577,7 @@ Binary Binary::operator*(const Binary& b) const {
 
         bool add = false;
         while (leftiter > std::begin(result) && rightiter > std::begin(vec)) {
-            value_type sum = *(leftiter - 1) ^ *(rightiter - 1) ^ add;
+            value_type sum = *(leftiter - 1) ^*(rightiter - 1) ^add;
             add = (*(leftiter - 1) + *(rightiter - 1) + add) > 1;
             *(leftiter - 1) = sum;
             --leftiter;
@@ -494,6 +593,7 @@ Binary Binary::operator*(const Binary& b) const {
  * May throw if the divisor has a value of 0.
  */
 Binary Binary::operator/(const Binary& b) const noexcept(false) {
+    // TODO: Optimize this (mainly by avoiding copies)
     bool divbyzero = true;
     for (const value_type d : b.digits) {
         if (d) {
@@ -506,15 +606,17 @@ Binary Binary::operator/(const Binary& b) const noexcept(false) {
         throw div_by_zero_error();
     }
 
-    // initialize result to b's sign
+    Binary thiscopy(this->absVal());
+    Binary bcopy(b.absVal());
+
+    // initialize result; and divisor to 0
     container_type result;
+    Binary divisor(container_type(1, 0));
 
-    Binary divisor(container_type(1, b.sign()));
+    auto leftiter = std::begin(thiscopy.digits);
 
-    auto leftiter = std::begin(this->digits);
-
-    while (divisor.precision() < this->precision()) {
-        if (divisor < b) {
+    while (divisor.precision() < thiscopy.precision()) {
+        if (divisor < bcopy) {
             result.emplace_back(0);
             divisor.digits.emplace_back(*++leftiter);
             ++divisor._precision;
@@ -522,21 +624,73 @@ Binary Binary::operator/(const Binary& b) const noexcept(false) {
         }
         result.emplace_back(1);
         size_type tempprec = divisor.precision();
-        divisor -= b;
+        divisor -= bcopy;
         // divisor's precision was promoted by -= so we have to reset it
         divisor.set_precision(tempprec);
         divisor.digits.emplace_back(*++leftiter);
         ++divisor._precision;
     }
 
-    if (divisor < b) {
+    if (divisor < bcopy) {
         result.emplace_back(0);
     } else {
         result.emplace_back(1);
     }
 
-    return Binary(result);
+    return (this->sign() ^ b.sign() ? -Binary(result) : Binary(result));
 
+}
+
+/**
+ * \brief Modulo Operator. The result will be of the maximum precision of the two arguments.
+ * May throw if the divisor has a value of 0.
+ */
+Binary Binary::operator%(const Binary& b) const {
+    // TODO: Optimize this (mainly by avoiding copies)
+    bool divbyzero = true;
+    for (const value_type d : b.digits) {
+        if (d) {
+            divbyzero = false;
+            break;
+        }
+    }
+
+    if (divbyzero) {
+        throw div_by_zero_error();
+    }
+
+    Binary thiscopy(this->absVal());
+    Binary bcopy(b.absVal());
+
+    // initialize ths temporary divisor with b's sign
+    Binary divisor(container_type(1, 0));
+
+    auto leftiter = std::begin(thiscopy.digits);
+
+    while (divisor.precision() < thiscopy.precision()) {
+        if (divisor < bcopy) {
+            divisor.digits.emplace_back(*++leftiter);
+            ++divisor._precision;
+            continue;
+        }
+        size_type tempprec = divisor.precision();
+        divisor -= bcopy;
+        // divisor's precision was promoted by -= so we have to reset it
+        divisor.set_precision(tempprec);
+        divisor.digits.emplace_back(*++leftiter);
+        ++divisor._precision;
+    }
+
+    if (divisor >= bcopy) {
+        divisor -= bcopy;
+    }
+
+    divisor.reserve(std::max(this->precision(), b.precision()));
+
+    // conventional signs
+    if (this->sign()) { divisor = -divisor; }
+
+    return divisor;
 }
 
 /**
@@ -689,4 +843,22 @@ Binary Binary::operator>>(const size_type n) const {
     result.erase(std::end(result) - n, std::end(result));
     result.insert(std::begin(result), n, 0);
     return Binary(result);
+}
+
+/**
+ * \brief Returns true if the binary's value is zero.
+ */
+bool Binary::operator!() const {
+    for (auto iter = std::begin(digits); iter != std::end(digits); ++iter) {
+        if (*iter) { return false; }
+    }
+    return true;
+}
+
+bool Binary::operator&&(const Binary& b) const {
+    return !(!*this || !b);
+}
+
+bool Binary::operator||(const Binary& b) const {
+    return !!*this || !!b;
 }

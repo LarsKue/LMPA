@@ -10,6 +10,7 @@ private:
 
     /// Arithmetic ///
     static bool Invert();
+    static bool AbsVal();
     static bool Plus();
     static bool PlusEquals();
     static bool Minus();
@@ -18,6 +19,8 @@ private:
     static bool TimesEquals();
     static bool Divide();
     static bool DivideEquals();
+    static bool Modulo();
+    static bool ModuloEquals();
 
     static bool PreIncrement();
     static bool PostIncrement();
