@@ -50,55 +50,56 @@ void UnitTests::run() {
 
     std::cout << "----------------------------------------------------------------" << std::endl;
     std::cout << "All Tests Passed Successfully." << std::endl;
+    std::cout << "----------------------------------------------------------------" << std::endl;
 }
 
 bool UnitTests::Invert() {
-    Binary a(43, true);
-    Binary result(-43, true);
+    Binary a(43);
+    Binary result(-43);
 
     return (-a) == result;
 }
 
 bool UnitTests::AbsVal() {
-    Binary a(-43, true);
-    Binary result(43, true);
+    Binary a(-43);
+    Binary result(43);
 
     return (a.absVal()) == result;
 }
 
 bool UnitTests::Plus() {
-    Binary a(27, true);
-    Binary b(78, true);
+    Binary a(27);
+    Binary b(78);
 
-    Binary result1(27 + 78, true);
+    Binary result1(27 + 78);
 
-    Binary c(-78, true);
+    Binary c(-78);
 
-    Binary result2(27 - 78, true);
+    Binary result2(27 - 78);
 
-    Binary d(-27, true);
+    Binary d(-27);
 
-    Binary result3(-27 + 78, true);
+    Binary result3(-27 + 78);
 
-    Binary result4(-27 - 78, true);
+    Binary result4(-27 - 78);
 
     return (a + b) == result1 && (a + c) == result2
             && (d + b) == result3 && (d + c == result4);
 }
 
 bool UnitTests::PlusEquals() {
-    Binary a(47, true);
-    Binary b(65, true);
+    Binary a(47);
+    Binary b(65);
 
-    Binary c(-47, true);
-    Binary d(-65, true);
+    Binary c(-47);
+    Binary d(-65);
 
-    Binary a2(47, true);
+    Binary a2(47);
 
 
-    Binary result1(47 + 65, true);
-    Binary result2(-47 + 65, true);
-    Binary result3(47 - 65, true);
+    Binary result1(47 + 65);
+    Binary result2(-47 + 65);
+    Binary result3(47 - 65);
 
     a += b;
     c += b;
@@ -107,42 +108,42 @@ bool UnitTests::PlusEquals() {
 }
 
 bool UnitTests::Minus() {
-    Binary a(78, true);
-    Binary b(27, true);
-    Binary c(-78, true);
-    Binary d(-27, true);
+    Binary a(78);
+    Binary b(27);
+    Binary c(-78);
+    Binary d(-27);
 
-    Binary result1(78 - 27, true);
-    Binary result2(27 - 78, true);
-    Binary result3(-27 - 78, true);
-    Binary result4(-27 + 78, true);
+    Binary result1(78 - 27);
+    Binary result2(27 - 78);
+    Binary result3(-27 - 78);
+    Binary result4(-27 + 78);
 
     return (a - b) == result1 && (b - a) == result2 && (d - a) == result3 && (d - c) == result4;
 }
 
 bool UnitTests::MinusEquals() {
-    Binary a(27, true);
-    Binary b(78, true);
+    Binary a(27);
+    Binary b(78);
 
-    Binary result(27 - 78, true);
+    Binary result(27 - 78);
 
     a -= b;
     return a == result;
 }
 
 bool UnitTests::Times() {
-    Binary a(55, true);
-    Binary b(6, true);
+    Binary a(55);
+    Binary b(6);
 
-    Binary result(55 * 6, true);
+    Binary result(55 * 6);
     return a * b == result;
 }
 
 bool UnitTests::TimesEquals() {
-    Binary a(55, true);
-    Binary b(6, true);
+    Binary a(55);
+    Binary b(6);
 
-    Binary result(55 * 6, true);
+    Binary result(55 * 6);
 
     a *= b;
     return a == result;
@@ -151,29 +152,29 @@ bool UnitTests::TimesEquals() {
 bool UnitTests::Divide() {
     // TODO: Expand
 
-    Binary a(-55, true);
-    Binary b(5, true);
+    Binary a(-55);
+    Binary b(5);
 
-    Binary result(-11, true);
+    Binary result(-11);
 
     return a / b == result;
 }
 
 bool UnitTests::DivideEquals() {
     // TODO: Expand
-    Binary a(55, true);
-    Binary b(5, true);
+    Binary a(55);
+    Binary b(5);
 
-    Binary result(11, true);
+    Binary result(11);
     a /= b;
     return a == result;
 }
 
 bool UnitTests::Modulo() {
-    Binary a(56, true);
-    Binary b(10, true);
-    Binary result1(6, true);
-    Binary result2(-6, true);
+    Binary a(56);
+    Binary b(10);
+    Binary result1(6);
+    Binary result2(-6);
     // 56 % 10 = 6
     // -56 % 10 = -6
     // 56 % -10 = 6
@@ -188,14 +189,14 @@ bool UnitTests::Modulo() {
 
 
 bool UnitTests::ModuloEquals() {
-    Binary a(57, true);
-    Binary b(10, true);
-    Binary a2(57, true);
-    Binary b2(-10, true);
-    Binary a3(-57, true);
-    Binary a4(-57, true);
-    Binary result1(7, true);
-    Binary result2(-7, true);
+    Binary a(57);
+    Binary b(10);
+    Binary a2(57);
+    Binary b2(-10);
+    Binary a3(-57);
+    Binary a4(-57);
+    Binary result1(7);
+    Binary result2(-7);
 
     a %= b;
     a2 %= b2;
@@ -210,38 +211,38 @@ bool UnitTests::ModuloEquals() {
 }
 
 bool UnitTests::PreIncrement() {
-    Binary a(23, true);
-    Binary b(23 + 1, true);
+    Binary a(23);
+    Binary b(23 + 1);
 
     return ++a == b;
 }
 
 bool UnitTests::PostIncrement() {
-    Binary a(23, true);
-    Binary b(23, true);
-    Binary c(23 + 1, true);
+    Binary a(23);
+    Binary b(23);
+    Binary c(23 + 1);
 
     return a++ == b && a == c;
 }
 
 bool UnitTests::PreDecrement() {
-    Binary a(23, true);
-    Binary b(23 - 1, true);
+    Binary a(23);
+    Binary b(23 - 1);
 
     return --a == b;
 }
 
 bool UnitTests::PostDecrement() {
-    Binary a(23, true);
-    Binary b(23, true);
-    Binary c(23 - 1, true);
+    Binary a(23);
+    Binary b(23);
+    Binary c(23 - 1);
 
     return a-- == b && a == c;
 }
 
 bool UnitTests::SmallerThan() {
-    Binary a(23, true);
-    Binary b(23 + 1, true);
+    Binary a(23);
+    Binary b(23 + 1);
 
     return a < b && !(b < a);
 }
@@ -263,8 +264,8 @@ bool UnitTests::Other() {
 
 
     // dynamically test / vs *
-    Binary a(2, true);
-    Binary b(3, true);
+    Binary a(2);
+    Binary b(3);
 
     constexpr Binary::size_type prec = 512;
     a.reserve(prec);

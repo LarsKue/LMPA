@@ -26,7 +26,7 @@ Binary::Binary() noexcept : digits(32, 0) {
 /**
  * \brief Constructor with user-specified precision. The object's value will be 0.
  */
-Binary::Binary(size_type precision) noexcept : _precision(precision), digits(precision, 0) {
+Binary::Binary(size_type precision, bool) noexcept : _precision(precision), digits(precision, 0) {
 }
 
 /**
@@ -58,6 +58,20 @@ Binary::Binary(const container_type& d, int sgn) noexcept(false) : digits(d) {
 Binary::Binary(const container_type& d, value_type sgn) noexcept : digits(d) {
     digits.insert(std::begin(digits), sgn);
     _precision = digits.size();
+}
+
+
+/// Conversion Operators ///
+
+/**
+ * \brief Boolean Conversion Operator.
+ * \return if the value of the Binary is 0.
+ */
+Binary::operator bool() {
+    for (auto iter = std::begin(digits); iter != std::end(digits); ++iter) {
+        if (*iter) { return false; }
+    }
+    return true;
 }
 
 
@@ -406,7 +420,7 @@ Binary& Binary::operator>>=(const size_type n) {
 /**
  * \brief Prefix-Increment Operator.
  */
-Binary Binary::operator++() {
+Binary& Binary::operator++() {
     // prefix
     // add one to the vector
     for (auto iter = std::end(digits); iter-- > std::begin(digits); /* no increment */) {
@@ -422,7 +436,7 @@ Binary Binary::operator++() {
 /**
  * \brief Prefix-Decrement Operator.
  */
-Binary Binary::operator--() {
+Binary& Binary::operator--() {
     // prefix
     // subtract one from the vector
     for (auto iter = std::end(digits); iter-- > std::begin(digits); /* no increment */) {
@@ -843,22 +857,4 @@ Binary Binary::operator>>(const size_type n) const {
     result.erase(std::end(result) - n, std::end(result));
     result.insert(std::begin(result), n, 0);
     return Binary(result);
-}
-
-/**
- * \brief Returns true if the binary's value is zero.
- */
-bool Binary::operator!() const {
-    for (auto iter = std::begin(digits); iter != std::end(digits); ++iter) {
-        if (*iter) { return false; }
-    }
-    return true;
-}
-
-bool Binary::operator&&(const Binary& b) const {
-    return !(!*this || !b);
-}
-
-bool Binary::operator||(const Binary& b) const {
-    return !!*this || !!b;
 }

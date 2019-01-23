@@ -13,6 +13,9 @@
 #include <iostream> // operator<< stream overload, size_t
 #include <algorithm> // reverse
 
+
+#include <bitset> // debugging
+
 class LMPA;
 
 class div_by_zero_error : public std::runtime_error {
@@ -40,32 +43,58 @@ public:
 
     /// Constructors ///
     Binary() noexcept;
-    explicit Binary(size_type precision) noexcept;
+    // The token boolean is necessary to differ the function signature from the Conversion Constructor.
+    explicit Binary(size_type precision, bool) noexcept;
     explicit Binary(const container_type& d) noexcept;
     explicit Binary(const container_type& d, int sgn) noexcept(false);
     explicit Binary(const container_type& d, value_type sgn) noexcept;
-
-    /**
-     * \brief Constructor that initializes a binary from a variable's bit representation.
-     * The precision will be that of the initializer.
-     * The token boolean is necessary to differ the function signature from precision-only instantiation
-     */
-    template<typename T>
-    explicit Binary(const T& initializer, bool) noexcept {
-        static_assert(std::is_arithmetic<T>::value, "Binary initialized with non-arithmetic or non-primitive data type!");
-        T copy = initializer;
-        for (size_type i = 0; i < sizeof(initializer) * 8; ++i) {
-            digits.emplace_back(copy & 1);
-            copy >>= 1;
-        }
-        _precision = sizeof(initializer) * 8;
-        std::reverse(std::begin(digits), std::end(digits));
-    }
 
     Binary(const Binary& b) = default;
     Binary(Binary&& b) = default;
 
     ~Binary() = default;
+
+    /// Conversion Constructors ///
+    // TODO: Consider this.
+
+    /**
+     * \brief Binary Conversion Constructor. Initializes a Binary from a primitive type's bit representation.
+     * The precision will be that of the initializer.
+     */
+    template<typename T>
+    Binary(const T& initializer) noexcept : digits() {
+        static_assert(std::is_arithmetic<T>::value, "Binary conversion initialized with non-arithmetic or non-primitive data type!");
+        for (size_type i = 0; i < sizeof(initializer) * 8; ++i) {
+            digits.emplace_back(initializer & 1 << i);
+        }
+        _precision = sizeof(initializer) * 8;
+        std::reverse(std::begin(digits), std::end(digits));
+    }
+
+
+    /// Conversion Operators ///
+    explicit operator bool();
+
+    /**
+     * \brief Conversion Operator for Standard Arithmetic Types. Will copy bits one-by-one.
+     */
+    template<typename T>
+    explicit operator T() {
+        static_assert(std::is_arithmetic<T>::value, "Binary conversion operator called with non-arithmetic or non-primitive data type!");
+        if (this->precision() == 0) {
+            return 0;
+        }
+        T result = 0;
+        auto iter = std::end(digits) - 1;
+        for (size_type i = 0; i < precision(); ++i) {
+            if (i > sizeof(T) * 8) { break; }
+            if (*iter) {
+                result |= 1 << i;
+            }
+            --iter;
+        }
+        return result;
+    }
 
 
     /// Utility ///
@@ -101,8 +130,8 @@ public:
 
     /// Increment, Decrement ///
     // prefix
-    Binary operator++();
-    Binary operator--();
+    Binary& operator++();
+    Binary& operator--();
     // postfix
     const Binary operator++(int);
     const Binary operator--(int);
@@ -121,10 +150,7 @@ public:
     Binary operator>>(const std::size_t n) const;
 
     /// Logical ///
-    bool operator!() const;
-    bool operator&&(const Binary& b) const;
-    bool operator||(const Binary& b) const;
-    // bitwise logical, Binaries can be used as logical expressions
+    // non-bitwise logical operators are replaced by boolean conversion operator
     Binary operator&(const Binary& b) const;
     Binary operator|(const Binary& b) const;
 

@@ -28,11 +28,21 @@ int main() {
     UnitTests::run();
 
 
-    // 5-bit binary
-    Binary a(5);
+    // 5-bit binary with value 0
+    Binary a(5, true);
 
     // binary with the value 1234
-    Binary b(1234, true);
+    Binary b(1234);
+
+    int c = static_cast<int>(b);
+
+    Binary d;
+    d = static_cast<Binary>(17);
+
+
+    std::cout << std::bitset<sizeof(c) * 8>(c) << std::endl;
+
+    std::cout << c << std::endl;
 
 //    a.print();
 //    b.print();
