@@ -1,6 +1,9 @@
 //
 // Created by Lars on 16/12/2018.
 //
+
+#define DEBUG
+
 #include "../LMPA/LMPA.h"
 #include "../LMPA/Binary.h"
 
