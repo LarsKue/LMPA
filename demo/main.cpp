@@ -28,27 +28,47 @@ time_type benchmark(T function, Args&&... args) {
 
 int main() {
 
-    UnitTests::run();
+//    int a = 264;
+//
+//    unsigned char b = static_cast<unsigned char>(a);
+//
+//    std::cout << (int) b << std::endl;
+//    std::cout << std::bitset<sizeof(a) * 8>(b) << std::endl;
+//    std::cout << std::bitset<sizeof(a) * 8>(a) << std::endl;
+
+//    UnitTests::run();
 
 
-    // 5-bit binary with value 0
-    Binary a(5, true);
+    //5-byte binary with value 0
+//    Binary a(5, true);
 
     // binary with the value 1234
-    Binary b(1234);
+    size_t b_value = 1234;
+    Binary b(b_value);
 
-    int c = static_cast<int>(b);
+    // binary with the value 2345
+    size_t c_value = SIZE_MAX;
+    Binary c(c_value);
 
-    Binary d;
-    d = static_cast<Binary>(17);
+    std::cout << "debug" << std::endl;
+    b += c;
 
+    int val = static_cast<int>(b);
 
-    std::cout << std::bitset<sizeof(c) * 8>(c) << std::endl;
+//    Binary d;
+//    d = static_cast<Binary>(17);
 
+//    std::cout << a << std::endl;
+    std::cout << b << std::endl;
     std::cout << c << std::endl;
+    std::cout << val << std::endl;
+    std::cout << b_value + c_value << std::endl;
 
-//    a.print();
-//    b.print();
+//    std::cout << d << std::endl;
+
+//    std::cout << std::bitset<sizeof(c) * 8>(c) << std::endl;
+//
+//    std::cout << c << std::endl;
 
     return 0;
 }
