@@ -36,8 +36,23 @@ public:
     // Zero-Initialization Constructor, token bool for signature distinction
     explicit Binary(size_type precision, bool) noexcept;
 
+    // conversion constructor
+    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
+    Binary(const T& initializer) noexcept {
+        for (size_type i = 0; i < sizeof(initializer) * 8; ++i) {
+            emplace_back(initializer & 1 << i);
+        }
+        precision = sizeof(initializer) * 8;
+        std::reverse(this->begin(), this->end());
+    }
+
+
     // inherit base class constructors
     using base_type::base_type;
+
+    // inherit iterators
+    using base_type::iterator;
+    using base_type::reverse_iterator;
 
     /// Operators ///
 
@@ -58,6 +73,7 @@ public:
     bool get_bit(size_type index) const;
     void set_bit(size_type index, bool val);
     bool toggle_bit(size_type index);
+    void flip();
 
 #ifdef DEBUG
     friend std::ostream& operator<<(std::ostream& stream, const Binary& b) {
@@ -68,5 +84,8 @@ public:
         return stream;
     }
 #endif
+
+private:
+    size_type precision = 0;
     
 };
