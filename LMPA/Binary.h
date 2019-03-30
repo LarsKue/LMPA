@@ -6,6 +6,10 @@
 #error This library requires at least C++11.
 #endif // C++11 check
 
+#if -1 != ~0
+#warning "This library has been developed on a machine that uses Twos Complement. Yours uses Ones Complement. If you run into trouble, please contact the Developer."
+#endif
+
 
 #include <vector>
 #include <iostream>
@@ -14,8 +18,6 @@
 #ifdef LMPA_DEBUG
 #include <bitset>
 #endif
-
-#include <bitset>
 
 #define ISARITHMETICTYPE    std::enable_if<std::is_arithmetic<T>::value, bool>::type = true
 
@@ -100,8 +102,15 @@ public:
 
     template<typename T, enable_if_arithmetic<T> = true>
     Binary& operator-=(T other) {
-        return (*this) += -other;
+        // enforce twos complement negation
+        return (*this) += ++(~other);
     }
+
+    template<typename T, enable_if_arithmetic<T> = true>
+    Binary& operator*=(T other);
+
+    template<typename T, enable_if_arithmetic<T> = true>
+    Binary& operator/=(T other);
 
     // Binary Assignment
     Binary& operator+=(const Binary& other);
