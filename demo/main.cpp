@@ -2,7 +2,8 @@
 // Created by Lars on 16/12/2018.
 //
 
-#define DEBUG
+#define LMPA_DEBUG
+#define LMPA_OVERFLOW_PROTECTION
 
 #include "../LMPA/LMPA.h"
 #include "../LMPA/Binary.h"
@@ -27,48 +28,16 @@ time_type benchmark(T function, Args&&... args) {
 }
 
 int main() {
+    std::size_t a_value = 1234;
+    std::size_t b_value = 7558126;
 
-//    int a = 264;
-//
-//    unsigned char b = static_cast<unsigned char>(a);
-//
-//    std::cout << (int) b << std::endl;
-//    std::cout << std::bitset<sizeof(a) * 8>(b) << std::endl;
-//    std::cout << std::bitset<sizeof(a) * 8>(a) << std::endl;
-
-//    UnitTests::run();
-
-
-    //5-byte binary with value 0
-//    Binary a(5, true);
-
-    // binary with the value 1234
-    size_t b_value = 1234;
+    Binary a(a_value);
     Binary b(b_value);
 
-    // binary with the value 2345
-    size_t c_value = SIZE_MAX;
-    Binary c(c_value);
-
-    std::cout << "debug" << std::endl;
-    b += c;
-
-    int val = static_cast<int>(b);
-
-//    Binary d;
-//    d = static_cast<Binary>(17);
-
-//    std::cout << a << std::endl;
+    std::cout << a << std::endl;
     std::cout << b << std::endl;
-    std::cout << c << std::endl;
-    std::cout << val << std::endl;
-    std::cout << b_value + c_value << std::endl;
-
-//    std::cout << d << std::endl;
-
-//    std::cout << std::bitset<sizeof(c) * 8>(c) << std::endl;
-//
-//    std::cout << c << std::endl;
+    a += b;
+    std::cout << a << std::endl;
 
     return 0;
 }
