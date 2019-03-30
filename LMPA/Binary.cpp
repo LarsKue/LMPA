@@ -54,11 +54,16 @@ Binary& Binary::operator-=(const Binary& other) {
 }
 
 
-//Binary& Binary::operator*=(const Binary& other) {
-//    return <#initializer#>;
-//}
-//
-//
+Binary& Binary::operator*=(const Binary& other) {
+#ifndef LMPA_DISABLE_WARNINGS
+    if (precision() <= other.precision()) {
+        std::cerr << "Warning: Truncation of Binary in Assignment to lower precision Binary." << std::endl;
+    }
+#endif
+    return *this;
+}
+
+
 //Binary& Binary::operator/=(const Binary& other) {
 //    return <#initializer#>;
 //}
@@ -144,7 +149,7 @@ Binary Binary::operator-() const {
  * \brief Increments the Binary. Binary segments are guaranteed not to overflow.
  * \return 
  */
-Binary Binary::operator++() {
+Binary& Binary::operator++() {
     auto riter = this->rbegin();
     while (riter != this->rend()) {
         large_segment sum = *riter + 1u;
@@ -159,7 +164,7 @@ Binary Binary::operator++() {
 }
 
 
-Binary Binary::operator--() {
+Binary& Binary::operator--() {
     auto riter = this->rbegin();
     while (riter != this->rend()) {
         if (*riter > 0) {

@@ -28,16 +28,21 @@ time_type benchmark(T function, Args&&... args) {
 }
 
 int main() {
-    std::size_t a_value = 1234;
-    std::size_t b_value = 7558126;
+    std::size_t a_value = 25058972;
+    std::size_t b_value = 180187598719;
+    std::size_t c_value = 300277233571;
 
     Binary a(a_value);
     Binary b(b_value);
+    Binary c(c_value);
+    Binary c_copy(c_value);
 
-    std::cout << a << std::endl;
-    std::cout << b << std::endl;
-    a += b;
-    std::cout << a << std::endl;
+
+    c += c;
+    c_copy += c_value;
+    std::cout << static_cast<std::size_t>(c) << std::endl;
+    std::cout << static_cast<std::size_t>(c_copy) << std::endl;
+    std::cout << 2 * c_value << std::endl;
 
     return 0;
 }

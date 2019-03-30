@@ -17,6 +17,8 @@
 
 #include <bitset>
 
+#define ISARITHMETICTYPE    std::enable_if<std::is_arithmetic<T>::value, bool>::type = true
+
 
 
 class LMPA;
@@ -40,12 +42,15 @@ public:
     typedef             Binary_Types::large_segment     large_segment;
     typedef typename    Binary_Types::base_type         base_type;
     typedef typename    Binary_Types::size_type         size_type;
+
+    template<typename T>
+    using enable_if_arithmetic = typename std::enable_if<std::is_arithmetic<T>::value, bool>::type;
     
     // Zero-Initialization Constructor, token bool for signature distinction
     explicit Binary(size_type prec, bool) noexcept;
 
     // conversion constructor
-    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
+    template<typename T, enable_if_arithmetic<T> = true>
     Binary(T initializer) noexcept : base_type(sizeof(initializer), 0) {
         // TODO: Make this work for value types other than unsigned char
         auto riter = rbegin();
@@ -56,7 +61,7 @@ public:
     }
 
     // conversion operators
-    template<typename T, typename std::enable_if<std::is_arithmetic<T>::value, bool>::type = true>
+    template<typename T, enable_if_arithmetic<T> = true>
     explicit operator T() const {
         T result = 0;
         for (const segment seg : *this) {
@@ -69,7 +74,36 @@ public:
 
     /// Operators ///
 
-    // assignment
+    // Integral Type Assignment
+    template<typename T, enable_if_arithmetic<T> = true>
+    Binary& operator+=(T other) {
+#ifndef LMPA_DISABLE_WARNINGS
+        if (sizeof(other) > size()) {
+            std::cerr << "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision." << std::endl;
+        }
+#endif
+        bool add = false;
+        auto riter = rbegin();
+        while (other > 0 && riter != rend()) {
+            auto trunc = static_cast<segment>(other);
+            large_segment sum = *riter + trunc + add;
+            add = sum > std::numeric_limits<segment>::max();
+            *riter = static_cast<segment>(sum);
+            other >>= sizeof(segment) * 8;
+            ++riter;
+        }
+        if (add && riter != rend()) {
+            ++(*riter);
+        }
+        return *this;
+    }
+
+    template<typename T, enable_if_arithmetic<T> = true>
+    Binary& operator-=(T other) {
+        return (*this) += -other;
+    }
+
+    // Binary Assignment
     Binary& operator+=(const Binary& other);
     Binary& operator-=(const Binary& other);
     Binary& operator*=(const Binary& other);
@@ -88,8 +122,8 @@ public:
     Binary operator-() const;
 
     // prefix increment
-    Binary operator++();
-    Binary operator--();
+    Binary& operator++();
+    Binary& operator--();
 
     // postfix increment
     const Binary operator++(int);
