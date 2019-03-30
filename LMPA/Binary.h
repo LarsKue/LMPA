@@ -19,9 +19,6 @@
 #include <bitset>
 #endif
 
-#define ISARITHMETICTYPE    std::enable_if<std::is_arithmetic<T>::value, bool>::type = true
-
-
 
 class LMPA;
 
