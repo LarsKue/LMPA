@@ -11,12 +11,18 @@
  */
 Binary::Binary(size_type prec, bool) noexcept : base_type(prec, 0) {}
 
+/* Consider:
+ *  Change logic to use a reversed binary vector (i.e. lowest elements are in the front)
+ *  this might make some of the complexities better (e.g. precision changing)
+ */
+
 
 /**
  * \brief Adds a Binary onto another. Binary segments are guaranteed not to overflow.
  * Will truncate the right-hand-side if necessary.
  */
 Binary& Binary::operator+=(const Binary& other) {
+    // TODO: Write Macro for Warnings
 #ifndef LMPA_DISABLE_WARNINGS
     if (precision() < other.precision()) {
         std::cerr << "Warning: Truncation of Binary in Assignment to lower precision Binary." << std::endl;
@@ -31,6 +37,7 @@ Binary& Binary::operator+=(const Binary& other) {
         large_segment sum = *leftiter + *rightiter + add;
         *leftiter = static_cast<segment>(sum);
         add = sum > std::numeric_limits<segment>::max();
+        std::cout << (*this) << std::endl;
 
         ++leftiter;
         ++rightiter;
@@ -40,6 +47,7 @@ Binary& Binary::operator+=(const Binary& other) {
         large_segment sum = *leftiter + add;
         *leftiter = static_cast<segment>(sum);
         add = sum > std::numeric_limits<segment>::max();
+        std::cout << (*this) << std::endl;
 
         ++leftiter;
     }
@@ -55,11 +63,35 @@ Binary& Binary::operator-=(const Binary& other) {
 
 
 Binary& Binary::operator*=(const Binary& other) {
+    // TODO: Negative Number Multiplication
 #ifndef LMPA_DISABLE_WARNINGS
-    if (precision() <= other.precision()) {
+    if (precision() < other.precision()) {
         std::cerr << "Warning: Truncation of Binary in Assignment to lower precision Binary." << std::endl;
     }
 #endif
+
+    // TODO: Fix
+
+    Binary result(size(), true);
+    for (size_type i = 0; i < size(); ++i) {
+        size_type idx = size() - i - 1;
+        segment add = 0;
+        for (size_type j = 0; j < other.size(); ++j) {
+            size_type jdx = other.size() - j - 1;
+            large_segment intermediate = (*this)[idx] * other[jdx] + add;
+            add = static_cast<segment>(intermediate >> sizeof(segment) * 8);
+            int testidx = static_cast<int>(result.size() - i - j - 1);
+            if (testidx >= 0) {
+                result.at(result.size() - i - j - 1) += static_cast<segment>(intermediate);
+            } else {
+                break;
+            }
+        }
+    }
+    std::cout << this << std::endl;
+    *this = result;
+    std::cout << this << std::endl;
+
     return *this;
 }
 
@@ -178,6 +210,48 @@ Binary& Binary::operator--() {
     return *this;
 }
 
+
+/**
+ * \brief Checks the sign of the Binary.
+ */
+bool Binary::sign() {
+    return get_value_bit(0, (*this)[0]);
+}
+
+
+/**
+ * \brief Unsafely sets the precision to the specified one (in bytes). This may lower the object's value,
+ * similar to static_cast on integral types.
+ */
+void Binary::set_precision(Binary::size_type prec) {
+    if (prec < size()) {
+        this->erase(begin(), begin() + size() - prec);
+    } else if (prec > size()) {
+        this->insert(begin(), prec - size(), (sign() ? ~0u : 0u));
+    }
+}
+
+
+/**
+ * \brief Safely promotes the Binary upwards to at least the specified precision.
+ */
+void Binary::promote(Binary::size_type prec) {
+    if (prec > size()) {
+        this->insert(begin(), prec - size(), (sign() ? ~0u : 0u));
+    }
+}
+
+
+/**
+ * \brief Safely shrinks the Binary to the minimum size needed to represent its current value.
+ */
+void Binary::shrink() {
+    while ((*this)[0] == (sign() ? ~0u : 0u)) {
+        this->erase(begin());
+    }
+}
+
+
 /**
  * \brief Returns the nth bit.
  */
@@ -188,6 +262,7 @@ bool Binary::get_bit(Binary::size_type index) const noexcept(false) {
     size_type invertedbitidx = sizeof(segment) * 8 - index % (sizeof(segment) * 8) - 1;
     return static_cast<bool>((*this)[idx] & 1ULL << invertedbitidx);
 }
+
 
 /**
  * \brief Sets the nth bit to val.
@@ -204,6 +279,7 @@ void Binary::set_bit(Binary::size_type index, bool val) noexcept(false) {
     }
 }
 
+
 /**
  * \brief Toggles the nth bit and returns the new value.
  */
@@ -215,6 +291,7 @@ bool Binary::toggle_bit(Binary::size_type index) noexcept(false) {
     (*this)[idx] ^= 1ULL << invertedbitidx;
     return static_cast<bool>((*this)[idx] & 1ULL << invertedbitidx);
 }
+
 
 /**
  * \brief Flips all bits.
@@ -234,6 +311,7 @@ Binary Binary::flipped() const {
     return result;
 }
 
+
 /**
  * \brief Checks if the given index is within appropriate range for the Binary.
  */
@@ -242,6 +320,7 @@ void Binary::indexCheck(size_type index) const noexcept(false) {
         throw std::out_of_range("Invalid index " + std::to_string(index) + " given to Binary with precision " + std::to_string(precision()) + ".");
     }
 }
+
 
 /**
  * \brief Returns the nth bit of a single segment (i.e. not a Binary class object).

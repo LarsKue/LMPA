@@ -3,7 +3,7 @@
 //
 
 #define LMPA_DEBUG
-#define LMPA_OVERFLOW_PROTECTION
+#define LMPA_LAZY_MULTIPLICATION
 
 #include "../LMPA/LMPA.h"
 #include "../LMPA/Binary.h"
@@ -27,22 +27,25 @@ time_type benchmark(T function, Args&&... args) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
 }
 
+
+// TODO: A bunch of testing with negative values
 int main() {
-    std::size_t a_value = 25058972;
-    std::size_t b_value = 180187598719;
-    std::size_t c_value = 300277233571;
+    int a_value = -2500;
+    int b_value = 2000;
 
     Binary a(a_value);
+    a.promote(8);
     Binary b(b_value);
-    Binary c(c_value);
-    Binary c_copy(c_value);
+    b.promote(8);
 
+    std::cout << a << std::endl;
 
-    c += c;
-    c_copy += c_value;
-    std::cout << static_cast<std::size_t>(c) << std::endl;
-    std::cout << static_cast<std::size_t>(c_copy) << std::endl;
-    std::cout << 2 * c_value << std::endl;
+    a *= b;
+
+    std::cout << a << std::endl;
+
+    std::cout << INT_MIN << std::endl;
+    std::cout << static_cast<int64_t>(a) << std::endl;
 
     return 0;
 }

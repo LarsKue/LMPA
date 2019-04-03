@@ -10,6 +10,8 @@
 #warning "This library has been developed on a machine that uses Twos Complement. Yours uses Ones Complement or Sign Magnitude Representation. If you run into trouble, please contact the Developer."
 #endif
 
+#define LMPA_DEBUG
+
 
 #include <vector>
 #include <iostream>
@@ -19,12 +21,19 @@
 #include <bitset>
 #endif
 
+#ifndef LMPA_DEBUG
+#define at(idx) operator[](idx)
+#endif // LMPA_DEBUG
+
+#include <bitset>
+
 
 class LMPA;
 
 
 namespace Binary_Types {
     // large_segment must be of a precision higher than segment.
+    // segments must be unsigned
     typedef             unsigned char                   segment;
     typedef             unsigned int                    large_segment;
     typedef typename    std::vector<segment>            base_type;
@@ -45,7 +54,7 @@ public:
     template<typename T>
     using enable_if_arithmetic = typename std::enable_if<std::is_arithmetic<T>::value, bool>::type;
     
-    // Zero-Initialization Constructor, token bool for signature distinction
+    // Zero-Initialization Constructor, token bool for signature distinction (is compiled away)
     explicit Binary(size_type prec, bool) noexcept;
 
     // conversion constructor
@@ -135,6 +144,11 @@ public:
     const Binary operator++(int);
     const Binary operator--(int);
 
+
+    bool sign();
+    void set_precision(size_type prec);
+    void promote(size_type prec);
+    void shrink();
     size_type precision() const noexcept { return size() * 8; }
     bool get_bit(size_type index) const noexcept(false);
     void set_bit(size_type index, bool val) noexcept(false);
@@ -142,7 +156,7 @@ public:
     void flip();
     Binary flipped() const;
 
-#ifdef LMPA_DEBUG
+//#ifdef LMPA_DEBUG
     friend std::ostream& operator<<(std::ostream& stream, const Binary& b) {
         stream << "0b";
         for (const segment seg : b) {
@@ -150,7 +164,7 @@ public:
         }
         return stream;
     }
-#endif
+//#endif
 
 private:
     void indexCheck(size_type index) const noexcept(false);
