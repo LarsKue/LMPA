@@ -16,6 +16,8 @@
 
 #include "UnitTests.h"
 
+#include <thread>
+
 typedef long long int time_type;
 
 template<typename T, typename... Args>
@@ -27,25 +29,51 @@ time_type benchmark(T function, Args&&... args) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(endtime - starttime).count();
 }
 
+std::vector<std::thread*> threads;
+
+void test_multiplication(int64_t a_value) {
+    for (int64_t b_value = -10000; b_value <= 10000; ++b_value) {
+        Binary a(a_value);
+        a.promote(8);
+        Binary b(b_value);
+        b.shrink();
+
+        a *= b;
+
+        if (static_cast<int64_t>(a) != a_value * b_value) {
+            std::cerr << "Error on A = " << a_value << " B = " << b_value << std::endl;
+            std::cerr << "A: " << Binary(a_value) << std::endl;
+            std::cerr << "B: " << b << std::endl;
+            std::cerr << "Binary Result: " << a << std::endl;
+            std::cerr << "Decimal Results: " << std::endl;
+            std::cerr << a_value * b_value << " vs " << static_cast<int64_t>(a) << std::endl;
+            throw std::runtime_error("A: " + std::to_string(a_value) + "; B: " + std::to_string(b_value));
+        }
+    }
+    std::cout << "Finished Testing A = " << a_value << std::endl;
+}
+
 
 // TODO: A bunch of testing with negative values
 int main() {
-    int a_value = -2500;
-    int b_value = 2000;
+    int64_t a_value = -10000;
+    int64_t b_value = 2;
 
     Binary a(a_value);
-    a.promote(8);
     Binary b(b_value);
-    b.promote(8);
+    b.shrink();
 
-    std::cout << a << std::endl;
+
+    std::cout << "0b" << std::bitset<64>(static_cast<unsigned long long int>(a_value * b_value)) << std::endl;
 
     a *= b;
 
+    std::cout << static_cast<int64_t>(a) << std::endl;
     std::cout << a << std::endl;
 
-    std::cout << INT_MIN << std::endl;
-    std::cout << static_cast<int64_t>(a) << std::endl;
 
+//    for (int64_t a_value = -10000; a_value <= 10000; ++a_value) {
+//        test_multiplication(a_value);
+//    }
     return 0;
 }

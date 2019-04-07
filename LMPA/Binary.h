@@ -32,11 +32,11 @@ class LMPA;
 
 
 namespace Binary_Types {
-    // large_segment must be of a precision higher than segment.
+    // long_byte must be of a precision higher than byte.
     // segments must be unsigned
-    typedef             unsigned char                   segment;
-    typedef             unsigned int                    large_segment;
-    typedef typename    std::vector<segment>            base_type;
+    typedef             unsigned char                   byte;
+    typedef             unsigned int                    long_byte;
+    typedef typename    std::vector<byte>               base_type;
     typedef typename    base_type::size_type            size_type;
 }
 
@@ -46,8 +46,8 @@ class Binary : protected Binary_Types::base_type {
     friend class LMPA;
     
 public:
-    typedef             Binary_Types::segment           segment;
-    typedef             Binary_Types::large_segment     large_segment;
+    typedef             Binary_Types::byte              byte;
+    typedef             Binary_Types::long_byte         long_byte;
     typedef typename    Binary_Types::base_type         base_type;
     typedef typename    Binary_Types::size_type         size_type;
 
@@ -60,21 +60,19 @@ public:
     // conversion constructor
     template<typename T, enable_if_arithmetic<T> = true>
     Binary(T initializer) noexcept : base_type(sizeof(initializer), 0) {
-        // TODO: Make this work for value types other than unsigned char
         auto riter = rbegin();
         for (size_type i = 0; i < sizeof(initializer); ++i) {
-            *riter = static_cast<segment>(initializer >> i * sizeof(segment) * 8);
+            *riter = static_cast<byte>(initializer >> i * sizeof(byte) * 8);
             ++riter;
         }
     }
 
-    // conversion operators
+    // conversion operators, enable static casting to arithmetic types
     template<typename T, enable_if_arithmetic<T> = true>
     explicit operator T() const {
-        T result = 0;
-        for (const segment seg : *this) {
-            // TODO: Make this work for value types other than unsigned char
-            result <<= sizeof(segment) * 8;
+        T result = sign() ? ~0u : 0u;
+        for (const byte seg : *this) {
+            result <<= sizeof(byte) * 8;
             result += seg;
         }
         return result;
@@ -93,11 +91,11 @@ public:
         bool add = false;
         auto riter = rbegin();
         while (other > 0 && riter != rend()) {
-            auto trunc = static_cast<segment>(other);
-            large_segment sum = *riter + trunc + add;
-            add = sum > std::numeric_limits<segment>::max();
-            *riter = static_cast<segment>(sum);
-            other >>= sizeof(segment) * 8;
+            auto trunc = static_cast<byte>(other);
+            long_byte sum = *riter + trunc + add;
+            add = sum > std::numeric_limits<byte>::max();
+            *riter = static_cast<byte>(sum);
+            other >>= sizeof(byte) * 8;
             ++riter;
         }
         if (add && riter != rend()) {
@@ -113,7 +111,11 @@ public:
     }
 
     template<typename T, enable_if_arithmetic<T> = true>
-    Binary& operator*=(T other);
+    Binary& operator*=(T other) {
+        // TODO: optimize
+        Binary o(other);
+        return (*this) *= o;
+    }
 
     template<typename T, enable_if_arithmetic<T> = true>
     Binary& operator/=(T other);
@@ -145,7 +147,7 @@ public:
     const Binary operator--(int);
 
 
-    bool sign();
+    bool sign() const;
     void set_precision(size_type prec);
     void promote(size_type prec);
     void shrink();
@@ -156,19 +158,19 @@ public:
     void flip();
     Binary flipped() const;
 
-//#ifdef LMPA_DEBUG
+#ifdef LMPA_DEBUG
     friend std::ostream& operator<<(std::ostream& stream, const Binary& b) {
         stream << "0b";
-        for (const segment seg : b) {
-            stream << std::bitset<sizeof(segment) * 8>(seg);
+        for (const byte seg : b) {
+            stream << std::bitset<sizeof(byte) * 8>(seg);
         }
         return stream;
     }
-//#endif
+#endif
 
 private:
     void indexCheck(size_type index) const noexcept(false);
-    bool get_value_bit(size_type index, segment value) const;
+    bool get_value_bit(size_type index, byte value) const;
     
 };
 

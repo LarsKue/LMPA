@@ -18,7 +18,7 @@ Binary::Binary(size_type prec, bool) noexcept : base_type(prec, 0) {}
 
 
 /**
- * \brief Adds a Binary onto another. Binary segments are guaranteed not to overflow.
+ * \brief Adds a Binary onto another. Binary bytes are guaranteed not to overflow.
  * Will truncate the right-hand-side if necessary.
  */
 Binary& Binary::operator+=(const Binary& other) {
@@ -34,9 +34,9 @@ Binary& Binary::operator+=(const Binary& other) {
     bool add = false;
     while (leftiter != this->rend() && rightiter != other.rend()) {
         // check for overflow
-        large_segment sum = *leftiter + *rightiter + add;
-        *leftiter = static_cast<segment>(sum);
-        add = sum > std::numeric_limits<segment>::max();
+        long_byte sum = *leftiter + *rightiter + add;
+        *leftiter = static_cast<byte>(sum);
+        add = sum > std::numeric_limits<byte>::max();
         std::cout << (*this) << std::endl;
 
         ++leftiter;
@@ -44,9 +44,9 @@ Binary& Binary::operator+=(const Binary& other) {
     }
 
     while (leftiter != this->rend()) {
-        large_segment sum = *leftiter + add;
-        *leftiter = static_cast<segment>(sum);
-        add = sum > std::numeric_limits<segment>::max();
+        long_byte sum = *leftiter + add;
+        *leftiter = static_cast<byte>(sum);
+        add = sum > std::numeric_limits<byte>::max();
         std::cout << (*this) << std::endl;
 
         ++leftiter;
@@ -70,27 +70,39 @@ Binary& Binary::operator*=(const Binary& other) {
     }
 #endif
 
-    // TODO: Fix
 
     Binary result(size(), true);
     for (size_type i = 0; i < size(); ++i) {
         size_type idx = size() - i - 1;
-        segment add = 0;
+        // no need to multiply if the current byte is zero
+        if (this->at(idx) == 0) { continue; }
+        byte add = 0;
         for (size_type j = 0; j < other.size(); ++j) {
             size_type jdx = other.size() - j - 1;
-            large_segment intermediate = (*this)[idx] * other[jdx] + add;
-            add = static_cast<segment>(intermediate >> sizeof(segment) * 8);
-            int testidx = static_cast<int>(result.size() - i - j - 1);
-            if (testidx >= 0) {
-                result.at(result.size() - i - j - 1) += static_cast<segment>(intermediate);
-            } else {
-                break;
+            long_byte intermediate = (this->at(idx)) * other.at(jdx) + add;
+            add = static_cast<byte>(intermediate >> sizeof(byte) * 8);
+            int64_t finalidx = size() - i - j - 1;
+            if (finalidx >= 0) {
+                long_byte intermediate2 = result.at(static_cast<size_type>(finalidx)) + static_cast<byte>(intermediate);
+                add += static_cast<byte>(intermediate2 >> sizeof(byte) * 8);
+                result.at(static_cast<size_type>(finalidx)) = static_cast<byte>(intermediate2);
             }
         }
+        std::cout << result << std::endl;
+        if (other.size() < size() && add != 0) {
+            // in case the leftmost multiplication overflows
+            size_type finalidx = size() - other.size();
+            while (finalidx-- != 0) {
+                long_byte sum = result.at(finalidx) + add;
+                add = static_cast<byte>(sum >> sizeof(byte) * 8);
+                result.at(finalidx) = static_cast<byte>(sum);
+                if (add == 0) { break; }
+            }
+        }
+        std::cout << result << std::endl;
     }
-    std::cout << this << std::endl;
+
     *this = result;
-    std::cout << this << std::endl;
 
     return *this;
 }
@@ -112,7 +124,7 @@ Binary& Binary::operator<<=(Binary::size_type n) {
         bool add = false;
         while (riter != rend()) {
             // get first bit of value at riter
-            bool tempadd = static_cast<bool>(*riter >> (sizeof(segment) * 8 - 1));
+            bool tempadd = static_cast<bool>(*riter >> (sizeof(byte) * 8 - 1));
             *riter <<= 1;
             if (add) {
                 *riter |= 1;
@@ -138,7 +150,7 @@ Binary& Binary::operator>>=(Binary::size_type n) {
             bool tempadd = static_cast<bool>(*iter & 1);
             *iter >>= 1;
             if (add) {
-                *iter |= 1ULL << (sizeof(segment) * 8 - 1);
+                *iter |= 1ULL << (sizeof(byte) * 8 - 1);
             }
             add = tempadd;
             ++iter;
@@ -178,15 +190,15 @@ Binary Binary::operator-() const {
 }
 
 /**
- * \brief Increments the Binary. Binary segments are guaranteed not to overflow.
+ * \brief Increments the Binary. Binary bytes are guaranteed not to overflow.
  * \return 
  */
 Binary& Binary::operator++() {
     auto riter = this->rbegin();
     while (riter != this->rend()) {
-        large_segment sum = *riter + 1u;
-        *riter = static_cast<segment>(sum);
-        if (sum <= std::numeric_limits<segment>::max()) {
+        long_byte sum = *riter + 1u;
+        *riter = static_cast<byte>(sum);
+        if (sum <= std::numeric_limits<byte>::max()) {
             break;
         }
 
@@ -214,8 +226,8 @@ Binary& Binary::operator--() {
 /**
  * \brief Checks the sign of the Binary.
  */
-bool Binary::sign() {
-    return get_value_bit(0, (*this)[0]);
+bool Binary::sign() const {
+    return get_value_bit(0, this->at(0));
 }
 
 
@@ -244,9 +256,10 @@ void Binary::promote(Binary::size_type prec) {
 
 /**
  * \brief Safely shrinks the Binary to the minimum size needed to represent its current value.
+ * Will leave at least one byte of values.
  */
 void Binary::shrink() {
-    while ((*this)[0] == (sign() ? ~0u : 0u)) {
+    while (size() > 1 && this->at(0) == (sign() ? ~0u : 0u)) {
         this->erase(begin());
     }
 }
@@ -256,11 +269,10 @@ void Binary::shrink() {
  * \brief Returns the nth bit.
  */
 bool Binary::get_bit(Binary::size_type index) const noexcept(false) {
-    indexCheck(index);
-    size_type idx = index / (sizeof(segment) * 8);
+    size_type idx = index / (sizeof(byte) * 8);
     // minus one at the end because indices start at 0
-    size_type invertedbitidx = sizeof(segment) * 8 - index % (sizeof(segment) * 8) - 1;
-    return static_cast<bool>((*this)[idx] & 1ULL << invertedbitidx);
+    size_type invertedbitidx = sizeof(byte) * 8 - index % (sizeof(byte) * 8) - 1;
+    return static_cast<bool>(this->at(idx) & 1ULL << invertedbitidx);
 }
 
 
@@ -268,14 +280,13 @@ bool Binary::get_bit(Binary::size_type index) const noexcept(false) {
  * \brief Sets the nth bit to val.
  */
 void Binary::set_bit(Binary::size_type index, bool val) noexcept(false) {
-    indexCheck(index);
-    size_type idx = index / (sizeof(segment) * 8);
+    size_type idx = index / (sizeof(byte) * 8);
     // minus one at the end because indices start at 0
-    size_type invertedbitidx = sizeof(segment) * 8 - index % (sizeof(segment) * 8) - 1;
+    size_type invertedbitidx = sizeof(byte) * 8 - index % (sizeof(byte) * 8) - 1;
     if (val) {
-        (*this)[idx] |= 1ULL << invertedbitidx;
+        this->at(idx) |= 1ULL << invertedbitidx;
     } else {
-        (*this)[idx] &= ~(1ULL << invertedbitidx);
+        this->at(idx) &= ~(1ULL << invertedbitidx);
     }
 }
 
@@ -284,12 +295,11 @@ void Binary::set_bit(Binary::size_type index, bool val) noexcept(false) {
  * \brief Toggles the nth bit and returns the new value.
  */
 bool Binary::toggle_bit(Binary::size_type index) noexcept(false) {
-    indexCheck(index);
-    size_type idx = index / (sizeof(segment) * 8);
+    size_type idx = index / (sizeof(byte) * 8);
     // minus one at the end because indices start at 0
-    size_type invertedbitidx = sizeof(segment) * 8 - index % (sizeof(segment) * 8) - 1;
-    (*this)[idx] ^= 1ULL << invertedbitidx;
-    return static_cast<bool>((*this)[idx] & 1ULL << invertedbitidx);
+    size_type invertedbitidx = sizeof(byte) * 8 - index % (sizeof(byte) * 8) - 1;
+    this->at(idx) ^= 1ULL << invertedbitidx;
+    return static_cast<bool>(this->at(idx) & 1ULL << invertedbitidx);
 }
 
 
@@ -297,10 +307,11 @@ bool Binary::toggle_bit(Binary::size_type index) noexcept(false) {
  * \brief Flips all bits.
  */
 void Binary::flip() {
-    for (segment& item : *this) {
+    for (byte& item : *this) {
         item = ~item;
     }
 }
+
 
 /**
  * \brief Returns a copy of the Binary with all bits flipped.
@@ -313,18 +324,8 @@ Binary Binary::flipped() const {
 
 
 /**
- * \brief Checks if the given index is within appropriate range for the Binary.
+ * \brief Returns the nth bit of a single byte (i.e. not a Binary class object).
  */
-void Binary::indexCheck(size_type index) const noexcept(false) {
-    if (index >= size() * sizeof(segment) * 8) {
-        throw std::out_of_range("Invalid index " + std::to_string(index) + " given to Binary with precision " + std::to_string(precision()) + ".");
-    }
-}
-
-
-/**
- * \brief Returns the nth bit of a single segment (i.e. not a Binary class object).
- */
-bool Binary::get_value_bit(size_type index, segment value) const {
-    return static_cast<bool>(value & 1ULL << (sizeof(segment) * 8 - index - 1));
+bool Binary::get_value_bit(size_type index, byte value) const {
+    return static_cast<bool>(value & 1ULL << (sizeof(byte) * 8 - index - 1));
 }
