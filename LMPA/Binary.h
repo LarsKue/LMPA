@@ -13,19 +13,38 @@
 #define LMPA_DEBUG
 
 
-#include <vector>
-#include <iostream>
-#include <algorithm>
+#include <vector> // base class
+#include <iostream> // output
+#include <algorithm> // iterators
+#include <utility> // pair
+
+
 
 #ifdef LMPA_DEBUG
-#include <bitset>
-#endif
 
-#ifndef LMPA_DEBUG
+#include <bitset>
+
+#else
+
 #define at(idx) operator[](idx)
+
 #endif // LMPA_DEBUG
 
-#include <bitset>
+
+
+#ifndef LMPA_DISABLE_WARNINGS
+
+#define LMPA_WARNING(condition, message) \
+if (condition) { \
+    std::cerr << message << std::endl; \
+}
+
+#else
+
+#define LMPA_WARNING(condition, message)
+
+#endif // LMPA_DISABLE_WARNINGS
+
 
 
 class LMPA;
@@ -83,11 +102,9 @@ public:
     // Integral Type Assignment
     template<typename T, enable_if_arithmetic<T> = true>
     Binary& operator+=(T other) {
-#ifndef LMPA_DISABLE_WARNINGS
-        if (sizeof(other) > size()) {
-            std::cerr << "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision." << std::endl;
-        }
-#endif
+
+        LMPA_WARNING(sizeof(other) > size(), "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision.")
+
         bool add = false;
         auto riter = rbegin();
         while (other > 0 && riter != rend()) {
@@ -171,7 +188,10 @@ public:
 private:
     void indexCheck(size_type index) const noexcept(false);
     bool get_value_bit(size_type index, byte value) const;
-    
+
+    // internal utility
+    static std::pair<byte, byte> byte_addition(byte a, byte b, byte add);
+    static std::pair<byte, byte> byte_multiplication(byte a, byte b, byte add);
 };
 
 #endif // MULTIPRECISON_BINARY_H

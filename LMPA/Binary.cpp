@@ -22,32 +22,27 @@ Binary::Binary(size_type prec, bool) noexcept : base_type(prec, 0) {}
  * Will truncate the right-hand-side if necessary.
  */
 Binary& Binary::operator+=(const Binary& other) {
-    // TODO: Write Macro for Warnings
-#ifndef LMPA_DISABLE_WARNINGS
-    if (precision() < other.precision()) {
-        std::cerr << "Warning: Truncation of Binary in Assignment to lower precision Binary." << std::endl;
-    }
-#endif
+
+    LMPA_WARNING(precision() < other.precision(), "Warning: Truncation of Binary in Assignment to lower precision Binary.")
+
     auto leftiter = this->rbegin();
     auto rightiter = other.rbegin();
 
     bool add = false;
     while (leftiter != this->rend() && rightiter != other.rend()) {
-        // check for overflow
-        long_byte sum = *leftiter + *rightiter + add;
-        *leftiter = static_cast<byte>(sum);
-        add = sum > std::numeric_limits<byte>::max();
-        std::cout << (*this) << std::endl;
+        auto temp = byte_addition(*leftiter, *rightiter, add);
+        *leftiter = temp.first;
+        add = temp.second;
 
         ++leftiter;
         ++rightiter;
     }
 
-    while (leftiter != this->rend()) {
-        long_byte sum = *leftiter + add;
-        *leftiter = static_cast<byte>(sum);
-        add = sum > std::numeric_limits<byte>::max();
-        std::cout << (*this) << std::endl;
+    while (add && leftiter != this->rend()) {
+        // need to roll over the carried one
+        auto temp = byte_addition(*leftiter, 0, add);
+        *leftiter = temp.first;
+        add = temp.second;
 
         ++leftiter;
     }
@@ -64,46 +59,33 @@ Binary& Binary::operator-=(const Binary& other) {
 
 Binary& Binary::operator*=(const Binary& other) {
     // TODO: Negative Number Multiplication
-#ifndef LMPA_DISABLE_WARNINGS
-    if (precision() < other.precision()) {
-        std::cerr << "Warning: Truncation of Binary in Assignment to lower precision Binary." << std::endl;
-    }
-#endif
 
+    LMPA_WARNING(precision() < other.precision(), "Warning: Truncation of Binary in Assignment to lower precision Binary.")
 
     Binary result(size(), true);
-    for (size_type i = 0; i < size(); ++i) {
-        size_type idx = size() - i - 1;
-        // no need to multiply if the current byte is zero
-        if (this->at(idx) == 0) { continue; }
-        byte add = 0;
-        for (size_type j = 0; j < other.size(); ++j) {
-            size_type jdx = other.size() - j - 1;
-            long_byte intermediate = (this->at(idx)) * other.at(jdx) + add;
-            add = static_cast<byte>(intermediate >> sizeof(byte) * 8);
-            int64_t finalidx = size() - i - j - 1;
-            if (finalidx >= 0) {
-                long_byte intermediate2 = result.at(static_cast<size_type>(finalidx)) + static_cast<byte>(intermediate);
-                add += static_cast<byte>(intermediate2 >> sizeof(byte) * 8);
-                result.at(static_cast<size_type>(finalidx)) = static_cast<byte>(intermediate2);
+
+    for (auto leftiter = this->rbegin(); leftiter != this->rend(); ++leftiter) {
+        // resolve individual byte multiplication
+        for (auto rightiter = other.rbegin(); rightiter != other.rend(); ++rightiter) {
+            auto multiplicationresults = byte_multiplication(*leftiter, *rightiter, 0);
+            // resolve addition of current byte
+            auto resultiter = result.rbegin() + (leftiter - this->rbegin()) + (rightiter - other.rbegin());
+            byte add = multiplicationresults.second;
+            if (resultiter < result.rend()) {
+                auto additionresults = byte_addition(*resultiter, multiplicationresults.first, 0);
+                *resultiter = additionresults.first;
+                add += additionresults.second;
+            }
+            // resolve overflow
+            while (++resultiter < result.rend()) {
+                auto additionresults = byte_addition(*resultiter, add, 0);
+                *resultiter = additionresults.first;
+                add = additionresults.second;
             }
         }
-        std::cout << result << std::endl;
-        if (other.size() < size() && add != 0) {
-            // in case the leftmost multiplication overflows
-            size_type finalidx = size() - other.size();
-            while (finalidx-- != 0) {
-                long_byte sum = result.at(finalidx) + add;
-                add = static_cast<byte>(sum >> sizeof(byte) * 8);
-                result.at(finalidx) = static_cast<byte>(sum);
-                if (add == 0) { break; }
-            }
-        }
-        std::cout << result << std::endl;
     }
 
     *this = result;
-
     return *this;
 }
 
@@ -328,4 +310,22 @@ Binary Binary::flipped() const {
  */
 bool Binary::get_value_bit(size_type index, byte value) const {
     return static_cast<bool>(value & 1ULL << (sizeof(byte) * 8 - index - 1));
+}
+
+
+/**
+ * \brief Returns the add and result bytes of the sum of two bytes with a previously known add byte
+ */
+std::pair<Binary::byte, Binary::byte> Binary::byte_addition(byte a, byte b, byte add) {
+    long_byte intermediate = a + b + add;
+    return {static_cast<byte>(intermediate), static_cast<byte>(intermediate >> sizeof(byte) * 8)};
+}
+
+
+/**
+ * \brief Returns the add and result bytes of the product of two bytes with a previously known add byte
+ */
+std::pair<Binary::byte, Binary::byte> Binary::byte_multiplication(byte a, byte b, byte add) {
+    long_byte intermediate = a * b + add;
+    return {static_cast<byte>(intermediate), static_cast<byte>(intermediate >> sizeof(byte) * 8)};
 }
