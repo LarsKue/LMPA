@@ -58,7 +58,6 @@ Binary& Binary::operator-=(const Binary& other) {
 
 
 Binary& Binary::operator*=(const Binary& other) {
-    // TODO: Negative Number Multiplication
 
     LMPA_WARNING(precision() < other.precision(), "Warning: Truncation of Binary in Assignment to lower precision Binary.")
 
@@ -68,14 +67,19 @@ Binary& Binary::operator*=(const Binary& other) {
         // resolve individual byte multiplication
         for (auto rightiter = other.rbegin(); rightiter != other.rend(); ++rightiter) {
             auto multiplicationresults = byte_multiplication(*leftiter, *rightiter, 0);
+
             // resolve addition of current byte
             auto resultiter = result.rbegin() + (leftiter - this->rbegin()) + (rightiter - other.rbegin());
             byte add = multiplicationresults.second;
+
             if (resultiter < result.rend()) {
                 auto additionresults = byte_addition(*resultiter, multiplicationresults.first, 0);
                 *resultiter = additionresults.first;
+                // this addition may never overflow, as the maximum previous value for add is 0b011...11 or 2^(sizeof(byte) * 8 - 1) - 1
+                // and the maximum value for additionresults.second is 1.
                 add += additionresults.second;
-            }
+            } else { continue; }
+
             // resolve overflow
             while (++resultiter < result.rend()) {
                 auto additionresults = byte_addition(*resultiter, add, 0);

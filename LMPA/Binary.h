@@ -105,33 +105,72 @@ public:
 
         LMPA_WARNING(sizeof(other) > size(), "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision.")
 
-        bool add = false;
-        auto riter = rbegin();
-        while (other > 0 && riter != rend()) {
-            auto trunc = static_cast<byte>(other);
-            long_byte sum = *riter + trunc + add;
-            add = sum > std::numeric_limits<byte>::max();
-            *riter = static_cast<byte>(sum);
-            other >>= sizeof(byte) * 8;
-            ++riter;
+        auto leftiter = this->rbegin();
+        size_type i = 0;
+        byte add = 0;
+
+        while (leftiter != this->rend() && (other >> i * 8) != 0) {
+            auto temp = byte_addition(*leftiter, static_cast<byte>(other >> i * 8), add);
+            *leftiter = temp.first;
+            add = temp.second;
+
+            ++leftiter;
+            ++i;
         }
-        if (add && riter != rend()) {
-            ++(*riter);
+
+        while (add != 0 && leftiter != this->rend()) {
+            // roll over the carried one
+            auto temp = byte_addition(*leftiter, 0, add);
+            *leftiter = temp.first;
+            add = temp.second;
+
+            ++leftiter;
         }
+
         return *this;
     }
 
     template<typename T, enable_if_arithmetic<T> = true>
     Binary& operator-=(T other) {
         // enforce twos complement negation
-        return (*this) += ++(~other);
+        return (*this) += -other;
     }
 
     template<typename T, enable_if_arithmetic<T> = true>
     Binary& operator*=(T other) {
-        // TODO: optimize
-        Binary o(other);
-        return (*this) *= o;
+
+        LMPA_WARNING(sizeof(other) > size(), "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision.")
+
+        Binary result(size(), true);
+
+        // resolve individual byte multiplication
+        for (auto leftiter = this->rbegin(); leftiter != this->rend(); ++leftiter) {
+            for (size_type i = 0; i < sizeof(other); ++i) {
+                // resolve addition of current byte
+                byte otherbyte = static_cast<byte>(other >> i * 8);
+                auto multiplicationresults = byte_multiplication(*leftiter, otherbyte, 0);
+
+                auto resultiter = result.rbegin() + (leftiter - this->rbegin()) + i;
+                byte add = multiplicationresults.second;
+                if (resultiter < result.rend()) {
+                    auto additionresults = byte_addition(*resultiter, multiplicationresults.first, 0);
+                    // this addition may never overflow, as the maximum previous value for add is 0b011...11 or 2^(sizeof(byte) * 8 - 1) - 1
+                    // and the maximum value for additionresults.second is 1.
+                    *resultiter = additionresults.first;
+                    add += additionresults.second;
+                } else { continue; }
+
+                // resolve overflow
+                while (++resultiter < result.rend()) {
+                    auto additionresults = byte_addition(*resultiter, add, 0);
+                    *resultiter = additionresults.first;
+                    add = additionresults.second;
+                }
+            }
+        }
+
+        *this = result;
+        return *this;
     }
 
     template<typename T, enable_if_arithmetic<T> = true>
