@@ -72,12 +72,15 @@ public:
 
     template<typename T>
     using enable_if_arithmetic = typename std::enable_if<std::is_arithmetic<T>::value, bool>::type;
+
+    template<typename T>
+    using enable_if_integral = typename std::enable_if<std::is_integral<T>::value, bool>::type;
     
     // Zero-Initialization Constructor, token bool for signature distinction (is compiled away)
     explicit Binary(size_type prec, bool) noexcept;
 
     // conversion constructor
-    template<typename T, enable_if_arithmetic<T> = true>
+    template<typename T, enable_if_integral<T> = true>
     Binary(T initializer) noexcept : base_type(sizeof(initializer), 0) {
         auto riter = rbegin();
         for (size_type i = 0; i < sizeof(initializer); ++i) {
@@ -87,7 +90,7 @@ public:
     }
 
     // conversion operators, enable static casting to arithmetic types
-    template<typename T, enable_if_arithmetic<T> = true>
+    template<typename T, enable_if_integral<T> = true>
     explicit operator T() const {
         T result = sign() ? ~0u : 0u;
         for (const byte seg : *this) {
@@ -100,7 +103,7 @@ public:
     /// Operators ///
 
     // Integral Type Assignment
-    template<typename T, enable_if_arithmetic<T> = true>
+    template<typename T, enable_if_integral<T> = true>
     Binary& operator+=(T other) {
 
         LMPA_WARNING(sizeof(other) > size(), "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision.")
@@ -130,15 +133,37 @@ public:
         return *this;
     }
 
-    template<typename T, enable_if_arithmetic<T> = true>
+    template<typename T, enable_if_integral<T> = true>
     Binary& operator-=(T other) {
-        // enforce twos complement negation
         return (*this) += -other;
     }
 
-    template<typename T, enable_if_arithmetic<T> = true>
+    template<typename T, enable_if_integral<T> = true>
     Binary& operator*=(T other) {
+        Binary result = *this * other;
+        *this = result;
+        return *this;
+    }
 
+    template<typename T, enable_if_integral<T> = true>
+    Binary& operator/=(const T other) noexcept(false);
+
+    template<typename T, enable_if_integral<T> = true>
+    Binary operator+(const T other) const {
+        Binary result(*this);
+        result += other;
+        return result;
+    }
+
+    template<typename T, enable_if_integral<T> = true>
+    Binary operator-(const T other) const {
+        Binary result(*this);
+        result += -other;
+        return result;
+    }
+
+    template<typename T, enable_if_integral<T> = true>
+    Binary operator*(const T other) const {
         LMPA_WARNING(sizeof(other) > size(), "Warning: Truncation of Integral Type in Assignment to Binary with lower Precision.")
 
         Binary result(size(), true);
@@ -169,18 +194,17 @@ public:
             }
         }
 
-        *this = result;
-        return *this;
+        return result;
     }
 
-    template<typename T, enable_if_arithmetic<T> = true>
-    Binary& operator/=(T other);
+    template<typename T, enable_if_integral<T> = true>
+    Binary operator/(T other) const;
 
     // Binary Assignment
     Binary& operator+=(const Binary& other);
     Binary& operator-=(const Binary& other);
     Binary& operator*=(const Binary& other);
-    Binary& operator/=(const Binary& other);
+    Binary& operator/=(const Binary& other) noexcept(false);
 
     // shift assignment
     Binary& operator<<=(size_type n);
@@ -193,6 +217,11 @@ public:
     // arithmetic
     Binary operator+() const;
     Binary operator-() const;
+
+    Binary operator+(const Binary& other) const;
+    Binary operator-(const Binary& other) const;
+    Binary operator*(const Binary& other) const;
+    Binary operator/(const Binary& other) const noexcept(false);
 
     // prefix increment
     Binary& operator++();
@@ -225,7 +254,6 @@ public:
 #endif
 
 private:
-    void indexCheck(size_type index) const noexcept(false);
     bool get_value_bit(size_type index, byte value) const;
 
     // internal utility

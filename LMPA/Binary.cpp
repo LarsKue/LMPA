@@ -18,7 +18,7 @@ Binary::Binary(size_type prec, bool) noexcept : base_type(prec, 0) {}
 
 
 /**
- * \brief Adds a Binary onto another. Binary bytes are guaranteed not to overflow.
+ * \brief Adds a Binary onto another.
  * Will truncate the right-hand-side if necessary.
  */
 Binary& Binary::operator+=(const Binary& other) {
@@ -51,13 +51,21 @@ Binary& Binary::operator+=(const Binary& other) {
 }
 
 
+/**
+ * \brief Subtracts a Binary from another. See implementation for operator+=
+ */
 Binary& Binary::operator-=(const Binary& other) {
     (*this) += -other;
     return *this;
 }
 
 
+/**
+ * \brief Multiplies a Binary by another.
+ * Will truncate the right-hand-side if necessary.
+ */
 Binary& Binary::operator*=(const Binary& other) {
+    // TODO: Make more modular
 
     LMPA_WARNING(precision() < other.precision(), "Warning: Truncation of Binary in Assignment to lower precision Binary.")
 
@@ -94,6 +102,10 @@ Binary& Binary::operator*=(const Binary& other) {
 }
 
 
+/**
+ * \brief Divides a Binary by another.
+ * Will truncate the right-hand-side if necessary.
+ */
 //Binary& Binary::operator/=(const Binary& other) {
 //    return <#initializer#>;
 //}
@@ -165,19 +177,33 @@ Binary Binary::operator>>(Binary::size_type n) const {
     return result;
 }
 
-
+/**
+ * \brief Identity Operator. Does nothing.
+ */
 Binary Binary::operator+() const {
     return *this;
 }
 
 
+/**
+ * \brief Additive Inverse Operator. Returns a negated copy of the Binary.
+ */
 Binary Binary::operator-() const {
     return ++(this->flipped());
 }
 
+
 /**
- * \brief Increments the Binary. Binary bytes are guaranteed not to overflow.
- * \return 
+ * \brief Addition Operator. See Implementation for operator+=
+ */
+Binary Binary::operator+(const Binary& other) const {
+    Binary result(*this);
+    result += other;
+    return result;
+}
+
+/**
+ * \brief Increments the Binary.
  */
 Binary& Binary::operator++() {
     auto riter = this->rbegin();
